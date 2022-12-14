@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/logging_custom_prefix_unittest.dir/src/logging_custom_prefix_unittest.cc.o -o logging_custom_prefix_unittest  libglogtest.a -lpthread 

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libglogtest.a CMakeFiles/glogbase.dir/src/demangle.cc.o CMakeFiles/glogbase.dir/src/logging.cc.o CMakeFiles/glogbase.dir/src/raw_logging.cc.o CMakeFiles/glogbase.dir/src/symbolize.cc.o CMakeFiles/glogbase.dir/src/utilities.cc.o CMakeFiles/glogbase.dir/src/vlog_is_on.cc.o CMakeFiles/glogbase.dir/src/signalhandler.cc.o
+/usr/bin/ranlib libglogtest.a

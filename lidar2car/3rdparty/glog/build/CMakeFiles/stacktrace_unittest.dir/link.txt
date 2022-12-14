@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/stacktrace_unittest.dir/src/stacktrace_unittest.cc.o -o stacktrace_unittest  libglogtest.a -lpthread 

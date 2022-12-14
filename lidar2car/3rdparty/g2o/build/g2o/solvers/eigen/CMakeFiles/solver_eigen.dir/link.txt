@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC   -Wall -W -O3 -DNDEBUG -O3 -shared -Wl,-soname,libg2o_solver_eigen.so -o ../../../../lib/libg2o_solver_eigen.so CMakeFiles/solver_eigen.dir/solver_eigen.cpp.o  -Wl,-rpath,/home/sensetime/ws/unified-senseauto/sensetime-main/LiDAR-SLAM/3rdparty/g2o/lib: ../../../../lib/libg2o_core.so ../../../../lib/libg2o_stuff.so -lrt 

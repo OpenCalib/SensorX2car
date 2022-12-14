@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/stl_logging_unittest.dir/src/stl_logging_unittest.cc.o -o stl_logging_unittest  libglogtest.a -lpthread 

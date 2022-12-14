@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/include/pcl-1.7",
+                "${workspaceFolder}/3rdparty/splinter-3.0/include",
+                "${workspaceFolder}/3rdparty/matplotlib-cpp",
+                "/usr/include/python2.7",
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/3rdparty/ceres/include"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
+}

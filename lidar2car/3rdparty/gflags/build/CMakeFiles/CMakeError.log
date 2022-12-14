@@ -1,0 +1,65 @@
+Performing C++ SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: /home/sensetime/ws/unified-senseauto/sensetime-main/LiDAR-SLAM/3rdparty/gflags/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_b2f8c/fast && /usr/bin/make  -f CMakeFiles/cmTC_b2f8c.dir/build.make CMakeFiles/cmTC_b2f8c.dir/build
+make[1]: Entering directory '/home/sensetime/ws/unified-senseauto/sensetime-main/LiDAR-SLAM/3rdparty/gflags/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_b2f8c.dir/src.cxx.o
+/usr/bin/c++ -DCMAKE_HAVE_LIBC_PTHREAD   -o CMakeFiles/cmTC_b2f8c.dir/src.cxx.o -c /home/sensetime/ws/unified-senseauto/sensetime-main/LiDAR-SLAM/3rdparty/gflags/build/CMakeFiles/CMakeTmp/src.cxx
+Linking CXX executable cmTC_b2f8c
+/usr/local/lib/python3.5/dist-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b2f8c.dir/link.txt --verbose=1
+/usr/bin/c++ -rdynamic CMakeFiles/cmTC_b2f8c.dir/src.cxx.o -o cmTC_b2f8c 
+CMakeFiles/cmTC_b2f8c.dir/src.cxx.o: In function `main':
+src.cxx:(.text+0x3c): undefined reference to `pthread_create'
+src.cxx:(.text+0x48): undefined reference to `pthread_detach'
+src.cxx:(.text+0x54): undefined reference to `pthread_cancel'
+src.cxx:(.text+0x65): undefined reference to `pthread_join'
+src.cxx:(.text+0x79): undefined reference to `pthread_atfork'
+collect2: error: ld returned 1 exit status
+CMakeFiles/cmTC_b2f8c.dir/build.make:98: recipe for target 'cmTC_b2f8c' failed
+make[1]: *** [cmTC_b2f8c] Error 1
+make[1]: Leaving directory '/home/sensetime/ws/unified-senseauto/sensetime-main/LiDAR-SLAM/3rdparty/gflags/build/CMakeFiles/CMakeTmp'
+Makefile:127: recipe for target 'cmTC_b2f8c/fast' failed
+make: *** [cmTC_b2f8c/fast] Error 2
+
+
+Source file was:
+#include <pthread.h>
+
+static void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_cancel(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/sensetime/ws/unified-senseauto/sensetime-main/LiDAR-SLAM/3rdparty/gflags/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_8a687/fast && /usr/bin/make  -f CMakeFiles/cmTC_8a687.dir/build.make CMakeFiles/cmTC_8a687.dir/build
+make[1]: Entering directory '/home/sensetime/ws/unified-senseauto/sensetime-main/LiDAR-SLAM/3rdparty/gflags/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_8a687.dir/CheckFunctionExists.cxx.o
+/usr/bin/c++   -DCHECK_FUNCTION_EXISTS=pthread_create -o CMakeFiles/cmTC_8a687.dir/CheckFunctionExists.cxx.o -c /home/sensetime/ws/unified-senseauto/sensetime-main/LiDAR-SLAM/3rdparty/gflags/build/CMakeFiles/CheckLibraryExists/CheckFunctionExists.cxx
+Linking CXX executable cmTC_8a687
+/usr/local/lib/python3.5/dist-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8a687.dir/link.txt --verbose=1
+/usr/bin/c++  -DCHECK_FUNCTION_EXISTS=pthread_create -rdynamic CMakeFiles/cmTC_8a687.dir/CheckFunctionExists.cxx.o -o cmTC_8a687  -lpthreads 
+/usr/bin/ld: cannot find -lpthreads
+collect2: error: ld returned 1 exit status
+CMakeFiles/cmTC_8a687.dir/build.make:98: recipe for target 'cmTC_8a687' failed
+make[1]: *** [cmTC_8a687] Error 1
+make[1]: Leaving directory '/home/sensetime/ws/unified-senseauto/sensetime-main/LiDAR-SLAM/3rdparty/gflags/build/CMakeFiles/CMakeTmp'
+Makefile:127: recipe for target 'cmTC_8a687/fast' failed
+make: *** [cmTC_8a687/fast] Error 2
+
+
+
