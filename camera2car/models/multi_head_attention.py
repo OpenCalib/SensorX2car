@@ -2,8 +2,11 @@ from typing import Tuple, Optional
 
 import torch
 from torch import Tensor
-from torch.nn.modules.linear import _LinearWithBias
-# from torch.nn.modules.linear import NonDynamicallyQuantizableLinear
+from packaging import version
+if version.parse(torch.__version__) < version.parse('1.9'):
+    from torch.nn.modules.linear import _LinearWithBias
+else:
+    from torch.nn.modules.linear import NonDynamicallyQuantizableLinear
 from torch.nn.init import xavier_uniform_
 from torch.nn.init import constant_
 from torch.nn.init import xavier_normal_
@@ -46,7 +49,10 @@ class MultiheadAttention(Module):
             self.in_proj_bias = Parameter(torch.empty(3 * embed_dim))
         else:
             self.register_parameter('in_proj_bias', None)
-        self.out_proj = _LinearWithBias(embed_dim, embed_dim)
+        if version.parse(torch.__version__) < version.parse('1.9'):
+            self.out_proj = _LinearWithBias(embed_dim, embed_dim)
+        else:
+            self.out_proj = NonDynamicallyQuantizableLinear(embed_dim, embed_dim)
 
         if add_bias_kv:
             self.bias_k = Parameter(torch.empty(1, 1, embed_dim))

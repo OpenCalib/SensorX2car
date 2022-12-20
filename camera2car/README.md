@@ -22,6 +22,9 @@ python train.py --config-file config-files/ctrlc.yaml
 ```shell
 python -m torch.distributed.launch --nproc_per_node=4 --use_env train.py --config-file config-files/ctrlc.yaml
 ```
+### Pre-trained Model
+You can download our pre-trained model from [Google Drive](https://drive.google.com/file/d/1yuYZ85pFMVD4tHdw07ZSVHz__ecI58fV/view?usp=share_link) to test.
+
 ### Evaluation
 * kitti dataset
 ```
