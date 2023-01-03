@@ -1,12 +1,14 @@
-## Introduction
-This project is used to calibrate camera2car pose from single image by detecting vanishing point and horizon line.
+# Introduction
+Camera2car pose calibration via vanishing point and horizon line detection. Both automatic and manual calibration approaches are provided.
+
+## Automatic calibration
+We design a network to predict vanishing point and horizon line from single image. The code is based on the implementations of [**CTRL-C: Camera calibration TRansformer with Line-Classification**](https://github.com/jwlee-vcl/CTRL-C). 
 
 ### Demo
 
 https://user-images.githubusercontent.com/91944792/210300604-06cac052-18f1-45b9-938e-141429d986b6.mp4
 
 
-## Detection Network
 ### Setup Environment
   ```
   conda create -n ctrlc
@@ -16,7 +18,7 @@ https://user-images.githubusercontent.com/91944792/210300604-06cac052-18f1-45b9-
   pip install -r requirements.txt
   ```
 ### Dataset
-We annotated vanishing points and horizon lines on KITTI dataset for training. You can download from the link below.
+We annotated vanishing point and horizon line on KITTI dataset for training. Please download it from the link below.
 ```
 Link(链接): https://pan.baidu.com/s/1iKXnzFZzQ6RvqCal2GzNOQ
 Extraction code(提取码): 89sf 
@@ -35,7 +37,7 @@ python train.py --config-file config-files/ctrlc.yaml
 python -m torch.distributed.launch --nproc_per_node=4 --use_env train.py --config-file config-files/ctrlc.yaml
 ```
 ### Pre-trained Model
-You can download our pre-trained model from [Google Drive](https://drive.google.com/file/d/1yuYZ85pFMVD4tHdw07ZSVHz__ecI58fV/view?usp=share_link) to test.
+Download the pre-trained model from [Google Drive](https://drive.google.com/file/d/1yuYZ85pFMVD4tHdw07ZSVHz__ecI58fV/view?usp=share_link).
 
 ### Evaluation
 * kitti dataset
@@ -47,6 +49,36 @@ python test_kitti.py --config-file config-files/ctrlc.yaml --opts MODE test
 python test_img.py --config-file config-files/ctrlc.yaml --opts MODE test DATASET_DIR ./pic/ OUTPUT_DIR ./outputs/
 ```
 
-### Acknowledgments
 
-This code is based on the implementations of [**CTRL-C: Camera calibration TRansformer with Line-Classification**](https://github.com/jwlee-vcl/CTRL-C). 
+## Manual calibration
+A manual calibration tool for camera2car calibration.
+
+### Prerequisites
+- Cmake
+- opencv 3.4
+- eigen 3
+- PCL 1.9
+- Pangolin 0.6
+
+### Compile
+```bash
+# mkdir build
+mkdir -p build && cd build
+# build
+cmake .. && make
+```
+
+### Usage
+```bash
+./bin/run_camera2car <image_path> <intrinsic_json>
+# example
+./bin/run_camera2car data/0.png data/center_camera-intrinsic.json
+```
+- image_path: image file from the Camera sensor
+- intrinsic_json: Camera intrinsic parameter JSON file
+
+### Calibration panel
+![sample](images/sample.png)
+
+
+You can adjust x, y, z angles on the left control panel and the image will be reprojected. The adjusting aim is: 1) make the vanishing point locate in the center of the picture(the intersection of two reference lines). 2) make the horizon line parallel to the horizon reference line. Once you think the target is aligned, click the save button or just close the window to save the result. The parameter is saved in the form of rotation matrix.
