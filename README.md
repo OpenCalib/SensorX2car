@@ -1,1 +1,2 @@
 # SensorX2car
+SensorX2car is a calibration toolbox for the online calibration of sensor-to-car coordinate systems in road scenes, which contains four commonly used sensors (pose_sensor (IMU + GNSS), LiDAR (Light Detection and Ranging), Camera, and millimeter-wave Radar) for autonomous driving. For more calibration codes, please refer to the link <a href="https://github.com/PJLab-ADG/SensorsCalibration" title="SensorsCalibration">SensorsCalibration</a>
