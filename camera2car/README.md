@@ -51,10 +51,9 @@ python test_img.py --config-file config-files/ctrlc.yaml --opts MODE test DATASE
 
 
 ## Manual calibration
-A manual calibration tool for camera2car calibration.
+A manual tool to calibrate the rotation matrix from camera to car.
 
 ### Prerequisites
-- Cmake
 - opencv 3.4
 - eigen 3
 - PCL 1.9
@@ -81,4 +80,7 @@ cmake .. && make
 ![sample](images/sample.png)
 
 
-You can adjust x, y, z angles on the left control panel and the image will be reprojected. The adjusting aim is: 1) make the vanishing point locate in the center of the picture(the intersection of two reference lines). 2) make the horizon line parallel to the horizon reference line. Once you think the target is aligned, click the save button or just close the window to save the result. The parameter is saved in the form of rotation matrix.
+You can adjust x, y, z angle on the left control panel and the image will be reprojected. The target is: 
+1) make the vanishing point locate in the center of the picture(the intersection of two reference lines). 
+2) make the horizon line parallel to the horizon reference line. 
+Once you think the adjustment is over, click the save button or just close the window to save the result. The parameter is saved in the form of rotation matrix.
