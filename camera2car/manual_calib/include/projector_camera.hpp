@@ -32,10 +32,10 @@ public:
         cv::remap(img_, outImg, mapx, mapy, cv::INTER_LINEAR);
 
         if (grid_on_){
-            cv::Point Pt1(outImg.cols / 2, 0);
-            cv::Point Pt2(outImg.cols / 2, outImg.rows - 1);
-            cv::Point Pt3(0, outImg.rows / 2);
-            cv::Point Pt4(outImg.cols - 1, outImg.rows / 2);
+            cv::Point Pt1(K_C_.at<double>(0, 2), 0);
+            cv::Point Pt2(K_C_.at<double>(0, 2), outImg.rows - 1);
+            cv::Point Pt3(0, K_C_.at<double>(1, 2));
+            cv::Point Pt4(outImg.cols - 1, K_C_.at<double>(1, 2));
             cv::line(outImg, Pt1, Pt2, cv::Scalar(0, 0, 255));
             cv::line(outImg, Pt3, Pt4, cv::Scalar(0, 0, 255));
         }
