@@ -2,11 +2,12 @@
 Camera2car pose calibration via vanishing point and horizon line detection. Both automatic and manual calibration approaches are provided.
 
 ## Automatic calibration
-We design a network to predict vanishing point and horizon line from single image. The code is based on the implementations of [**CTRL-C: Camera calibration TRansformer with Line-Classification**](https://github.com/jwlee-vcl/CTRL-C). 
+We design a network to predict vanishing point and horizon line on a single image. The code is based on the implementations of [**CTRL-C: Camera calibration TRansformer with Line-Classification**](https://github.com/jwlee-vcl/CTRL-C). 
 
 ### Demo
 
-https://user-images.githubusercontent.com/91944792/210300604-06cac052-18f1-45b9-938e-141429d986b6.mp4
+
+https://user-images.githubusercontent.com/91944792/210723034-4c92dcca-1c80-4577-8c7e-9d34d3544bb7.mp4
 
 
 ### Setup Environment
