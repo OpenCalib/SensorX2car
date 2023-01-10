@@ -46,6 +46,9 @@ include_directories(${PROJECT_SOURCE_DIR}/3rdparty/matplotlib-cpp)
 
 # other dependence
 include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(${PROJECT_SOURCE_DIR}/include/fastloam)
+include_directories(${PROJECT_SOURCE_DIR}/include/yawcalib)
+include_directories(${PROJECT_SOURCE_DIR}/include/rpzcalib)
 
 SET(DEP_LIBS
     ${Boost_LIBRARIES} 
@@ -60,7 +63,7 @@ file(GLOB_RECURSE SRC_LIST src/*.cpp src/*.c)
 
 add_library(${PROJECT_NAME} STATIC ${SRC_LIST})
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${DEP_LIBS})
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${DEP_LIBS} -lgomp)
 
 ADD_EXECUTABLE(run_lidar2car ${PROJECT_SOURCE_DIR}/app/run_lidar2car.cpp)
 TARGET_LINK_LIBRARIES(run_lidar2car ${PROJECT_NAME})

@@ -1,1 +1,0 @@
-/usr/bin/c++   -Wall -W -O3 -DNDEBUG -O3 -rdynamic CMakeFiles/curve_fit.dir/curve_fit.cpp.o -o ../../../../bin/curve_fit  -Wl,-rpath,/home/sensetime/ws/unified-senseauto/sensetime-main/LiDAR-SLAM/3rdparty/g2o/lib ../../../../lib/libg2o_core.so ../../../../lib/libg2o_stuff.so -lrt 

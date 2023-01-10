@@ -556,7 +556,7 @@ template <typename VectorY = std::vector<double>>
 bool plot(const VectorY &y,
           const std::map<std::string, std::string> &keywords) {
   std::vector<int> x(y.size());
-  for (int i = 0; i < x.size(); ++i)
+  for (unsigned int i = 0; i < x.size(); ++i)
     x.at(i) = i;
 
   return plot(x, y, "", keywords);

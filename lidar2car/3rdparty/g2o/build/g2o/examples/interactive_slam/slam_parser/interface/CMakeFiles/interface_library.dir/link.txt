@@ -1,1 +1,0 @@
-/usr/bin/c++ -fPIC   -Wall -W -O3 -DNDEBUG -O3 -shared -Wl,-soname,libg2o_interface.so -o ../../../../../../lib/libg2o_interface.so CMakeFiles/interface_library.dir/parser_interface.cpp.o CMakeFiles/interface_library.dir/slam_context_interface.cpp.o  -Wl,-rpath,/home/sensetime/ws/unified-senseauto/sensetime-main/LiDAR-SLAM/3rdparty/g2o/lib: ../../../../../../lib/libg2o_parser.so 

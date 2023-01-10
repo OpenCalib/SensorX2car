@@ -1,2 +1,0 @@
-Segment0: yaw = -1.2636 degree
-Final: yaw = -1.2636 degree

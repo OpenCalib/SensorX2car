@@ -1,5 +1,5 @@
 ## Introduction
-This project is used to calibrate yaw from lidar to car.
+A project for LiDAR to car calibration. The result includes three rotation angle and translation at z direction.
 ## Environment
 ```shell
 docker pull xiaokyan/opencalib:v1
@@ -15,6 +15,12 @@ mkdir -p build && cd build
 # build
 cmake .. && make
 ```
+## Data
+We uploaded a small amount of data for testing.
+```
+Link(链接): https://pan.baidu.com/s/1r9DcEuvz7IZ_rGpYo_WBBw
+Extraction code(提取码): 5m2x
+```
 ## Run example
 ```shell
 ./bin/run_lidar2car ./data/example/ ./output/
@@ -23,7 +29,9 @@ cmake .. && make
 - <dataset_folder>: contain lidar files
 - <output_dir>: save output file
 ## Output
-- yaw.txt: calibration result
+- extrinsic.txt: calibration result
 - pose.txt: lidar pose result
 - trajectory.png: lidar trajectory
 - compared_yaw.png: comparison between lidar pose yaw and trajectory yaw, which can be used to verify the result roughly
+## Note
+It is recommended that the vehicle drive in a straight line for better yaw angle estimation, and drive on a flatter ground to get better pitch and roll estimation.

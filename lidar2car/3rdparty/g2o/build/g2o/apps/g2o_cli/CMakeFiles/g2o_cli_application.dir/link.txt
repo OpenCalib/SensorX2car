@@ -1,1 +1,0 @@
-/usr/bin/c++   -Wall -W -O3 -DNDEBUG -O3 -rdynamic CMakeFiles/g2o_cli_application.dir/g2o.cpp.o -o ../../../../bin/g2o  -Wl,-rpath,/home/sensetime/ws/unified-senseauto/sensetime-main/LiDAR-SLAM/3rdparty/g2o/lib: ../../../../lib/libg2o_cli.so ../../../../lib/libg2o_core.so ../../../../lib/libg2o_stuff.so -lrt -ldl 
