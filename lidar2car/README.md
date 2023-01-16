@@ -34,4 +34,4 @@ Extraction code(提取码): 5m2x
 - trajectory.png: lidar trajectory
 - compared_yaw.png: comparison between lidar pose yaw and trajectory yaw, which can be used to verify the result roughly
 ## Note
-It is recommended that the vehicle drive in a straight line for better yaw angle estimation, and drive on a flatter ground to get better pitch and roll estimation.
+It is recommended that the vehicle drives in a straight line for better yaw angle estimation, and drives on a flatter ground to get better pitch and roll estimation.
