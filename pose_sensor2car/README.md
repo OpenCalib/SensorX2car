@@ -32,5 +32,5 @@ run command:
 - Set method_id = 2 if the vehicle is traveling freely.
 
 ## Note
-It is recommended that the vehicle drives in a straight line for a better calibration result, as the picture shows below.
+The vehicle is recommended to drive in a straight line for a better calibration result, as the picture shows below.
 <img src="./images/data_collect.png" width="70%" height="70%" alt="data collection" div align=center /><br>
