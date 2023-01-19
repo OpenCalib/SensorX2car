@@ -12,11 +12,11 @@ SensorX2car is a calibration toolbox for the online calibration of sensor-to-car
 ## Citation
 If you find this project useful in your research, please consider cite:
 ```
-@article{opencalib,
-    title={OpenCalib: A Multi-sensor Calibration Toolbox for Autonomous Driving},
-    author={Yan, Guohang and Liu, Zhuochun and Wang, Chengjie and Shi, Chunlei and Wei, Pengjin and Cai, Xinyu and Ma, Tao and Liu, Zhizheng and Zhong, Zebin and Liu, Yuqian and Zhao, Ming and Ma, Zheng and Li, Yikang},
-    journal={arXiv preprint arXiv:2205.14087},
-    year={2022},
+@misc{2301.07279,
+Author = {Guohang Yan and Zhaotong Luo and Zhuochun Liu and Yikang Li},
+Title = {SensorX2car: Sensors-to-car calibration for autonomous driving in road scenarios},
+Year = {2023},
+Eprint = {arXiv:2301.07279},
 }
 ```
 
