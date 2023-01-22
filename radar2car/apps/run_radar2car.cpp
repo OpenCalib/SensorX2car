@@ -31,7 +31,7 @@ int main(int argc, char **argv)
     if (radar_dir.rfind('/') != radar_dir.size() - 1) {
         radar_dir = radar_dir + "/";
     }
-    // creat output dir
+    // create output dir
     if (output_dir.rfind('/') != output_dir.size() - 1) {
         output_dir = output_dir + "/";
     }
