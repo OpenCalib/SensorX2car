@@ -6,8 +6,6 @@ This is a project for imu heading angle calibration and evalution.
 
 - **Imu heading evaluation:** Speed projection verification of imu through the calibrated heading angle of imu.
 
-<img src="./images/imu_heading.png" width="50%" height="50%" alt="checkerboard" div align=center /><br>
-
 ## Prerequisites
 
 - Cmake
@@ -33,4 +31,8 @@ run command:
 
 ## Note
 The vehicle is recommended to drive in a straight line for a better calibration result, as the picture shows below.
-<img src="./images/data_collect.png" width="70%" height="70%" alt="data collection" div align=center /><br>
+<div align=center><img src="./images/data_collect.png" width="70%" height="70%" alt="data collection"></div>
+
+The car-body frame and pose-sensor frame in this program are defined as follows:
+
+<div align=center><img src="./images/reference_frame.png" width="30%" height="30%" alt="reference frame"></div>
