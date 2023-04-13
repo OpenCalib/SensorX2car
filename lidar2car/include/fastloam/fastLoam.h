@@ -17,4 +17,8 @@
 #include "laserProcessingClass.h"
 #include "odomEstimationClass.h"
 
-bool RunFastLoam(const std::string dataset_folder, const std::string output_dir, std::vector<Eigen::Matrix4d> &lidar_pose);
+bool RunFastLoam(const std::string dataset_folder, 
+                 const std::string output_dir, 
+                 std::vector<Eigen::Matrix4d> &lidar_pose, 
+                 int start_frame, 
+                 int end_frame);

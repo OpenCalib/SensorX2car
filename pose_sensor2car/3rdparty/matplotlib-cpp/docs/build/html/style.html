@@ -1,0 +1,461 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>The style of a line &mdash; Matplotlib for C++  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="License" href="license.html" />
+    <link rel="prev" title="The Docs" href="docs.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Matplotlib for C++
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Content</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="compiling.html">Compiling a program</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docs.html">The Docs</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">The style of a line</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#marker">Marker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#line">Line</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#color">Color</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#character-code">Character code</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tableau-color">Tableau color</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#full-name">Full name</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#hex-code">HEX code</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html#questions">Questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="todo.html">To do</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Matplotlib for C++</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>The style of a line</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/style.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="the-style-of-a-line">
+<span id="style"></span><h1>The style of a line<a class="headerlink" href="#the-style-of-a-line" title="Permalink to this headline">¶</a></h1>
+<p>The style of a line in a plot has three characteristics; the
+marker, the color and the line.
+They can be specified using the keywords map
+or the formatting string.</p>
+<p>They keywords map is a possibility to specify additional parameters
+for the plot commands. To set the line style it can be used as follows.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// for a red dashed line with circle markers</span>
+<span class="n">plt</span><span class="o">::</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="p">{{</span><span class="s">&quot;color&quot;</span><span class="p">,</span> <span class="s">&quot;red&quot;</span><span class="p">},</span> <span class="p">{</span><span class="s">&quot;marker&quot;</span><span class="o">:</span> <span class="s">&quot;o&quot;</span><span class="p">},</span> <span class="p">{</span><span class="s">&quot;linestyle&quot;</span><span class="o">:</span> <span class="s">&quot;--&quot;</span><span class="p">}})</span>
+
+<span class="c1">// shorthand notation for color and linestyle is usually supported</span>
+<span class="n">plt</span><span class="o">::</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="p">{{</span><span class="s">&quot;c&quot;</span><span class="p">,</span> <span class="s">&quot;red&quot;</span><span class="p">},</span> <span class="p">{</span><span class="s">&quot;marker&quot;</span><span class="o">:</span> <span class="s">&quot;o&quot;</span><span class="p">},</span> <span class="p">{</span><span class="s">&quot;ls&quot;</span><span class="o">:</span> <span class="s">&quot;--&quot;</span><span class="p">}})</span>
+</pre></div>
+</div>
+<p>See sections <a class="reference internal" href="#marker">Marker</a>, <a class="reference internal" href="#color">Color</a> and <a class="reference internal" href="#line">Line</a>
+for supported values.</p>
+<p>The formatting string is a convenient notation to set the style of a line.
+Almost all plot commands support the formatting string as
+first argument after the <cite>x</cite> and <cite>y</cite> data.</p>
+<p>A formatting string’s structure is</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">s</span> <span class="o">=</span> <span class="s2">&quot;&lt;marker&gt;&lt;color&gt;&lt;line&gt;&quot;</span>
+</pre></div>
+</div>
+<p>The rules are</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>The valid parameters (<code class="docutils literal notranslate"><span class="pre">&lt;&gt;</span></code>) are listed in the following sections.</li>
+<li>Different ordering of the parameters is supported.
+However, to avoid ambiguity this order should be used throughout.</li>
+<li>Parameters might be dropped.</li>
+<li>If only the colour parameters is specified, more color
+parameters are supported, see section <a class="reference internal" href="#color">Color</a>.</li>
+</ol>
+</div></blockquote>
+<p><strong>Examples</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="s">&quot;b&quot;</span>    <span class="c1">// blue line</span>
+<span class="s">&quot;og&quot;</span>   <span class="c1">// green circles, no connecting line</span>
+<span class="s">&quot;og-&quot;</span>  <span class="c1">// green circles with connecting line</span>
+<span class="s">&quot;r--&quot;</span>  <span class="c1">// dashed red line</span>
+<span class="s">&quot;seagreen&quot;</span>  <span class="c1">// a solid line in the colour seagreen</span>
+<span class="s">&quot;#008000&quot;</span>   <span class="c1">// a solid line coloured in the HEX code</span>
+</pre></div>
+</div>
+<p>The following sections list the supported markers, colours and linestyles.</p>
+<div class="section" id="marker">
+<h2>Marker<a class="headerlink" href="#marker" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="docutils">
+<colgroup>
+<col width="33%" />
+<col width="67%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">character</th>
+<th class="head">marker</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">o</span></code></td>
+<td>circle</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">s</span></code></td>
+<td>square</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">D</span></code></td>
+<td>diamond</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">d</span></code></td>
+<td>thin diamond</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">p</span></code></td>
+<td>pentagon</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">H</span></code></td>
+<td>hexagon type 1</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">h</span></code></td>
+<td>hexagon type 2</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">v</span></code></td>
+<td>triangle down</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">^</span></code></td>
+<td>triangle up</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">&lt;</span></code></td>
+<td>triangle left</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">&gt;</span></code></td>
+<td>triangle right</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">*</span></code></td>
+<td>star</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">+</span></code></td>
+<td>plus</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">x</span></code></td>
+<td>x</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">.</span></code></td>
+<td>point</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">,</span></code></td>
+<td>pixel</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">|</span></code></td>
+<td>vertical lines</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">_</span></code></td>
+<td>horizontal lines</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">1</span></code></td>
+<td><cite>tri_down</cite> marker</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">2</span></code></td>
+<td><cite>tri_up</cite> marker</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">3</span></code></td>
+<td><cite>tri_left</cite> marker</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">4</span></code></td>
+<td><cite>tri_right</cite> marker</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="line">
+<h2>Line<a class="headerlink" href="#line" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="docutils">
+<colgroup>
+<col width="45%" />
+<col width="55%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">character</th>
+<th class="head">line</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">-</span></code></td>
+<td>solid</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">--</span></code></td>
+<td>dashed</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">:</span></code></td>
+<td>dotted</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">-.</span></code></td>
+<td>dash-dotted</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="color">
+<h2>Color<a class="headerlink" href="#color" title="Permalink to this headline">¶</a></h2>
+<p>The color can be specified via a character code,
+a tableau color, a full name or a HEX code.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If a formatting string contains more parameters than just the color,
+only the character code is supported.</p>
+</div>
+<div class="section" id="character-code">
+<h3>Character code<a class="headerlink" href="#character-code" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="56%" />
+<col width="44%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">character</th>
+<th class="head">color</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">b</span></code></td>
+<td>blue</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">r</span></code></td>
+<td>red</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">g</span></code></td>
+<td>green</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">c</span></code></td>
+<td>cyan</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">m</span></code></td>
+<td>magenta</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">y</span></code></td>
+<td>yellow</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">k</span></code></td>
+<td>black</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">w</span></code></td>
+<td>white</td>
+</tr>
+</tbody>
+</table>
+<p>The resulting colors are</p>
+<img alt="_images/base_colors.png" class="align-center" src="_images/base_colors.png" />
+</div>
+<div class="section" id="tableau-color">
+<h3>Tableau color<a class="headerlink" href="#tableau-color" title="Permalink to this headline">¶</a></h3>
+<p>The tableau colors are the default colors of the MPL color cycle.
+If no color is specified, the color of the lines will iterate over
+these colors.</p>
+<p>The tableau colors are</p>
+<img alt="_images/tab_colors.png" src="_images/tab_colors.png" />
+<p>Instead of <code class="docutils literal notranslate"><span class="pre">tab:&lt;colorname&gt;</span></code> it is equivalent to use <code class="docutils literal notranslate"><span class="pre">C&lt;color</span> <span class="pre">number&gt;</span></code>.
+The colors are numbered according to above image and <code class="docutils literal notranslate"><span class="pre">C0</span></code> is <code class="docutils literal notranslate"><span class="pre">tab:blue</span></code> and
+<code class="docutils literal notranslate"><span class="pre">C9</span></code> is <code class="docutils literal notranslate"><span class="pre">tab:cyan</span></code>.</p>
+<p><strong>Examples</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">::</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;tab:green&quot;</span><span class="p">);</span>  <span class="c1">// equivalent to &quot;C2&quot;</span>
+<span class="n">plt</span><span class="o">::</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;C3&quot;</span><span class="p">);</span>         <span class="c1">// equivalent to &quot;tab:red&quot;</span>
+<span class="n">plt</span><span class="o">::</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>               <span class="c1">// automatic coloring: &quot;tab:blue&quot;</span>
+<span class="n">plt</span><span class="o">::</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>               <span class="c1">// automatic coloring: &quot;tab:orange&quot;</span>
+<span class="n">plt</span><span class="o">::</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>               <span class="c1">// automatic coloring: &quot;tab:green&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="full-name">
+<h3>Full name<a class="headerlink" href="#full-name" title="Permalink to this headline">¶</a></h3>
+<p>To make way for your creativity all colors in the following table are
+supported. It’s a perfect way to waste a lot of time.</p>
+<img alt="_images/css_colors.png" class="align-center" src="_images/css_colors.png" />
+<p><strong>Examples</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">::</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;seagreen&quot;</span><span class="p">);</span>
+<span class="n">plt</span><span class="o">::</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s">&quot;firebrick&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="hex-code">
+<h3>HEX code<a class="headerlink" href="#hex-code" title="Permalink to this headline">¶</a></h3>
+<p>HEX codes are supported as <code class="docutils literal notranslate"><span class="pre">#xxxxxx</span></code>.
+To find the color of your desire a variety of online
+tools are available, as <a class="reference external" href="https://htmlcolorcodes.com">this one</a> for instance.</p>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="license.html" class="btn btn-neutral float-right" title="License" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="docs.html" class="btn btn-neutral float-left" title="The Docs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright Documentation: 2019, Julien Gacon. Library: 2014, Benno Evers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

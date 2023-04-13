@@ -1,36 +1,31 @@
 ## Introduction
-
-This is a project for imu heading angle calibration and evalution.
-
-- **Imu heading calibration:** The imu heading angle is obtained by the registration calculation of GPS trajectory and imu data.
-
-- **Imu heading evaluation:** Speed projection verification of imu through the calibrated heading angle of imu.
-
-## Prerequisites
-
-- Cmake
-- eigen 3
-
+A project for GNSS/INS heading angle calibration.
+## Environment
+```shell
+docker pull xiaokyan/opencalib:v1
+```
 ## Compile
-
 ```shell
 # mkdir build
 mkdir -p build && cd build
 # build
 cmake .. && make
 ```
-
-## Run
-run command:
+## Run example
 ```shell
-# run imu heading calibration
-./bin/run_imu_heading method_id <data_dir>
-```
-- Set method_id = 1 if the vehicle is traveling in a straight line. 
-- Set method_id = 2 if the vehicle is traveling freely.
+./bin/run_imu2car ./data/example/ ./output/
 
+# set data range(frames)
+./bin/run_imu2car ./data/example/ ./output/ 0 20000
+```
+## Input
+- <data_file>: contain GNSS/INS pose $(x, y, yaw)$
+- <output_dir>: save output file
+## Output
+- trajectory.png: vehicle trajectory (x, y)
+- compared_yaw.png: the comparison of yaw angle between imu and the vehicle, which can be used to verify the result roughly
 ## Note
-The vehicle is recommended to drive in a straight line for a better calibration result, as the picture shows below.
+This method can adapt to arbitrary driving routes. However, it is recommended for the vehicle to drive in a straight line for better estimation, as the picture shows below.
 <div align=center><img src="./images/data_collect.png" width="70%" height="70%" alt="data collection"></div>
 
 The car-body frame and pose-sensor frame in this program are defined as follows:

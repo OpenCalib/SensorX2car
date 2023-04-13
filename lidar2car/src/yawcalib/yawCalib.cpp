@@ -8,9 +8,9 @@
 
 namespace plt = matplotlibcpp;
 
-YawCalib::YawCalib(const std::string img_path) 
+YawCalib::YawCalib(const std::string output_dir) 
 {
-    img_path_ = img_path;
+    output_dir_ = output_dir;
     // plt::backend("Agg"); // plt run in background
 }
 
@@ -35,7 +35,7 @@ bool YawCalib::LoadData(const std::vector<Eigen::Matrix4d> &lidar_pose){
 
     if(save_trajectory_xy){
         plt::plot(lidar_pose_x_, lidar_pose_y_);
-        plt::savefig(img_path_ + "trajectory.png");
+        plt::savefig(output_dir_ + "trajectory.png");
         // plt::show();
         plt::close();
     }
@@ -44,6 +44,7 @@ bool YawCalib::LoadData(const std::vector<Eigen::Matrix4d> &lidar_pose){
 
 bool YawCalib::Calibrate(){
     // bspline pose_x and pose_y
+    std::cout << "---------------------------------------------------" << std::endl;
     std::cout << "start calibrating lidar yaw" << std::endl;
 
     DataTable sample_x, sample_y;
@@ -59,29 +60,36 @@ bool YawCalib::Calibrate(){
     std::vector<DataTable> samples_yaw;
     GetYawSegs(sample_x, sample_y, samples_yaw);
 
-    std::vector<double> yaws, weights;
+    std::vector<double> offset_yaws, weights;
     // calibrate each segment yaw
 
     for (unsigned int i = 0; i < samples_yaw.size(); i++)
     {
         DataTable sample_yaw = samples_yaw[i];
-        plt::plot(sample_yaw.getTableX()[0], sample_yaw.getVectorY(), {{"label", "trajectory yaw"}});
+        plt::plot(sample_yaw.getTableX()[0], sample_yaw.getVectorY(), "k--", {{"label", "trajectory yaw"}});
         double yaw;
         if(CalibrateSingle(sample_yaw, yaw)){
-            yaws.push_back(yaw);
+            offset_yaws.push_back(yaw);
             weights.push_back(sample_yaw.getNumSamples());
-            std::cout << "Segment" << i << ": yaw =" << rad2deg(yaw) << " degree" << std::endl;
+            std::cout << "Segment" << i << ": yaw =" << rad2deg(yaw) << " degree  weight = " << sample_yaw.getNumSamples() << std::endl;
         }
     }
-    plt::plot(lidar_pose_yaw_, {{"label", "lidar pose yaw"}});
+
+    std::vector<double> times;
+    for (unsigned int i = 0; i < lidar_pose_yaw_.size();i++)
+    {
+        times.push_back(i);
+    }
+    
+    plt::plot(times, lidar_pose_yaw_, "k-", {{"label", "lidar pose yaw"}});
     plt::legend();
-    plt::savefig(img_path_ + "compared_yaw.png");
+    plt::savefig(output_dir_ + "compared_yaw.png");
     plt::close();
-    if (yaws.size() == 0)
+    if (offset_yaws.size() == 0)
         return false;
-    final_yaw_ = Util::Mean(yaws);
-    std::cout << "Average yaw = " << rad2deg(final_yaw_) << " degree" << std::endl;
-    std::cout << "---------------------------------------------------" << std::endl;
+    final_yaw_ = Util::WeightMean(offset_yaws, weights);
+    // std::cout << "Average yaw = " << rad2deg(final_yaw_) << " degree" << std::endl;
+
     return true;
 }
 
@@ -90,7 +98,7 @@ bool YawCalib::GetYawSegs(const DataTable &sample_x, const DataTable &sample_y, 
     BSpline bspline_x = BSpline::Builder(sample_x).degree(bspine_degree_).smoothing(BSpline::Smoothing::PSPLINE).alpha(0.03).build();
     BSpline bspline_y = BSpline::Builder(sample_y).degree(bspine_degree_).smoothing(BSpline::Smoothing::PSPLINE).alpha(0.03).build();
 
-    int discarded_nums = int(pose_num_ * 0.1);
+    int discarded_nums = int(pose_num_ * 0.05);
     DataTable tmp_yaw;
     int last_t = 0;
     double last_yaw = 0;

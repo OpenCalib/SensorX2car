@@ -17,23 +17,59 @@ from pylsd import lsd
 import datasets.transforms as T
 import pickle
 
-def center_crop(img):
-    sz = img.shape[0:2]
-    side_length = np.min(sz)
-    if sz[0] > sz[1]:
-        ul_x = 0  
-        ul_y = int(np.floor((sz[0]/2) - (side_length/2)))
-        x_inds = [ul_x, sz[1]-1]
-        y_inds = [ul_y, ul_y + side_length - 1]
-    else:
-        ul_x = int(np.floor((sz[1]/2) - (side_length/2)))
-        ul_y = 0
-        x_inds = [ul_x, ul_x + side_length - 1]
-        y_inds = [ul_y, sz[0]-1]
+def get_transform(center, scale, res, rot=0):
+    # Generate transformation matrix
+    h = 200 * scale
+    t = np.zeros((3, 3))
+    t[0, 0] = float(res[1]) / h
+    t[1, 1] = float(res[0]) / h
+    t[0, 2] = res[1] * (-float(center[0]) / h + .5)
+    t[1, 2] = res[0] * (-float(center[1]) / h + .5)
+    t[2, 2] = 1
+    if not rot == 0:
+        rot = -rot # To match direction of rotation from cropping
+        rot_mat = np.zeros((3,3))
+        rot_rad = rot * np.pi / 180
+        sn,cs = np.sin(rot_rad), np.cos(rot_rad)
+        rot_mat[0,:2] = [cs, -sn]
+        rot_mat[1,:2] = [sn, cs]
+        rot_mat[2,2] = 1
+        # Need to rotate around center
+        t_mat = np.eye(3)
+        t_mat[0,2] = -res[1]/2
+        t_mat[1,2] = -res[0]/2
+        t_inv = t_mat.copy()
+        t_inv[:2,2] *= -1
+        t = np.dot(t_inv,np.dot(rot_mat,np.dot(t_mat,t)))
+    return t
 
-    c_img = img[y_inds[0]:y_inds[1]+1, x_inds[0]:x_inds[1]+1, :]
+def transform(pt, center, scale, res, invert=0, rot=0):
+    # Transform pixel location to different reference
+    t = get_transform(center, scale, res, rot=rot)
+    if invert:
+        t = np.linalg.inv(t)
+    new_pt = np.array([pt[0], pt[1], 1.]).T
+    new_pt = np.dot(t, new_pt)
+    return new_pt[:2].astype(int)
 
-    return c_img
+def crop(img, center, scale, res, rot=0):
+    # Upper left point
+    ul = np.array(transform([0, 0], center, scale, res, invert=1))
+    # Bottom right point
+    br = np.array(transform(res, center, scale, res, invert=1))
+    new_shape = [br[1] - ul[1], br[0] - ul[0]]
+    if len(img.shape) > 2:
+        new_shape += [img.shape[2]]
+    new_img = np.zeros(new_shape)
+
+    # Range to fill new array
+    new_x = max(0, -ul[0]), min(br[0], len(img[0])) - ul[0]
+    new_y = max(0, -ul[1]), min(br[1], len(img)) - ul[1]
+    # Range to sample from original image
+    old_x = max(0, ul[0]), min(len(img[0]), br[0])
+    old_y = max(0, ul[1]), min(len(img), br[1])
+    new_img[new_y[0]:new_y[1], new_x[0]:new_x[1]] = img[old_y[0]:old_y[1], old_x[0]:old_x[1]]
+    return cv2.resize(new_img, res)
 
 def create_masks(image):
     height = image.shape[0]
@@ -85,10 +121,23 @@ def sample_vert_segs_np(segs, thresh_theta=22.5):
     thresh_theta = np.radians(thresh_theta)
     return segs[theta < thresh_theta]
 
-def augment(image, vp, angle, division):
+def augment(image, vp, angle, division, w):
     if division == 1:  # left-right flip
-        return image[:, ::-1].copy(), (vp * [-1, 1, 1]).copy(), -angle
+        vp[0] = w - vp[0]
+        return image[:, ::-1].copy(), vp, -angle
     return image, vp, angle
+
+def kpt_affine(kpt, mat):
+    kpt = np.array(kpt)
+    shape = kpt.shape
+    kpt = kpt.reshape(-1, 2)
+    return np.dot( np.concatenate((kpt, kpt[:, 0:1]*0+1), axis = 1), mat.T ).reshape(shape)
+
+def draw_segs(img, segs):
+    for seg in segs:
+        start_point = (int(seg[0]), int(seg[1]))
+        end_point = (int(seg[2]), int(seg[3]))
+        cv2.line(img, start_point, end_point, (0, 255, 0), 1)
 
 class KittiDataset(Dataset):
     def __init__(self, cfg, listpath, basepath, return_masks=False, transform=None):
@@ -103,7 +152,7 @@ class KittiDataset(Dataset):
         self.return_vert_lines = cfg.DATASETS.RETURN_VERT_LINES
         self.return_masks = return_masks
         self.transform = transform
-        
+        self.mode = cfg.MODE
         self.list_filename = []
 
         with open(self.listpath, newline='') as csvfile:
@@ -112,17 +161,18 @@ class KittiDataset(Dataset):
                 date = row[0] # '2011_09_26 '
                 drive = row[1] # '0001'
                 
-                total_length = int(row[2]) # 108
-                for index in range(total_length):
-                    self.list_filename.append(self.basepath + '/' + date + '/' + drive + '/%06d.pkl' % index)
+                # # if use kitti_horizon_vp dataset
+                # total_length = int(row[2]) # 108
+                # for index in range(total_length):
+                #     self.list_filename.append(self.basepath + '/' + date + '/' + drive + '/%06d.pkl' % index)
                 
-                # if use kitti_horizon_vp_straight
-                # path = os.path.join(basepath, date, drive ,'*.pkl')
-                # pkl_path = gb.glob(path)
-                # self.list_filename.extend(pkl_path)
+                # if use kitti_horizon_vp_straight dataset
+                path = os.path.join(basepath, date, drive ,'*.pkl')
+                pkl_path = gb.glob(path)
+                self.list_filename.extend(pkl_path)
                 
         
-        if cfg.MODE == "train" and cfg.DATASETS.AUGMENTATION:
+        if self.mode == "train" and cfg.DATASETS.AUGMENTATION:
             self.size = len(self.list_filename) * 2
         else:
             self.size = len(self.list_filename)
@@ -137,44 +187,72 @@ class KittiDataset(Dataset):
         with open(filename, 'rb') as fp:
             data = pickle.load(fp)
 
-        image = np.transpose(data['image'], [1, 2, 0])
+        image = np.transpose(data['image'], [1, 2, 0]) # (c, h, w) -> (h, w, c)
         image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-        # image = image[:,:,::-1] # convert to rgb
         org_h, org_w = image.shape[0], image.shape[1]
         org_sz = np.array([org_h, org_w])
         
-        pp = (org_w/2, org_h/2) 
-        rho = 2.0/np.minimum(org_w,org_h)
+        center = (org_w / 2, org_h / 2)
+        pp = (self.input_width / 2, self.input_height / 2)
+        rho = 2.0 / np.minimum(self.input_width, self.input_height)
+        s = max(image.shape[0], image.shape[1]) / 200 # scale
+        shape = (self.input_width, self.input_height)
+        
         
         gt_angle = data['angle']
         if np.isnan(gt_angle):
             gt_angle = 0.
             print("warning:gt_angle is Nan")
         gt_vp = data['vp']
-        gt_vp[0] = rho * (gt_vp[0] - org_w/2)
-        gt_vp[1] = rho * (gt_vp[1] - org_h/2)
-        gt_vp.append(1.)
-        gt_vp = np.array(gt_vp)
 
-        image, gt_vp, gt_hl = augment(image, gt_vp, gt_angle, idx // len(self.list_filename))
-        # cv2.imwrite(image)
+        image, gt_vp, gt_hl = augment(image, gt_vp, gt_angle, idx // len(self.list_filename), org_w)
+        
         org_image = image.copy()
         
-        crop_image = center_crop(org_image)
-        crop_h, crop_w = crop_image.shape[0], crop_image.shape[1]
-        crop_sz = np.array([crop_h, crop_w]) 
-                
-        image = cv2.resize(image, dsize=(self.input_width, self.input_height))
-        input_sz = np.array([self.input_height, self.input_width])
-
-        
-        # detect line and preprocess       
-        gray = cv2.cvtColor(org_image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         org_segs = lsd(gray, scale=0.8)
         org_segs = filter_length(org_segs, self.min_line_length)
         num_segs = len(org_segs)
         assert num_segs > 10, print(num_segs)
+
+        # ---crop---
+        image_processed = crop(image, center, s, shape)
+        gt_vp = transform(gt_vp, center, s, shape)
         
+        for i in range(num_segs):
+            org_segs[i][0:2] = transform(org_segs[i][0:2], center, s, shape)
+            org_segs[i][2:4] = transform(org_segs[i][2:4], center, s, shape)
+        
+        # radius = 3
+        # color = (0, 0, 255)
+        # thickness = -1
+        # cropped_visual = image_processed.copy()
+        # cv2.circle(cropped_visual, (int(gt_vp[0]), int(gt_vp[1])), radius, color, thickness)
+        # draw_segs(cropped_visual, org_segs)    
+        # cv2.imwrite('cropped.png', cropped_visual)
+        
+        # ---rot and scale---
+        if self.mode == 'train':
+            new_center = np.array((shape[0] / 2, shape[1] / 2))
+            scale = max(shape[0], shape[1]) / 200
+            aug_rot = (np.random.random() * 2 - 1) * 20. 
+            aug_scale = 0.75 + np.random.random() * 0.5 
+            scale *= aug_scale
+            mat_mask = get_transform(new_center, scale, shape, aug_rot)[:2]
+            mat = get_transform(new_center, scale, shape, aug_rot)[:2]
+            image_processed= cv2.warpAffine(image_processed, mat, shape).astype(np.float32)
+            gt_vp = kpt_affine(gt_vp, mat_mask)
+            org_segs[:, 0:2] = kpt_affine(org_segs[:, 0:2], mat_mask)
+            org_segs[:, 2:4] = kpt_affine(org_segs[:, 2:4], mat_mask)
+        else:
+            aug_rot = 0
+            image_processed = image_processed.astype(np.float32)
+
+        # rot_scale_visual = image_processed.copy()
+        # cv2.circle(rot_scale_visual, (int(gt_vp[0]), int(gt_vp[1])), radius, color, thickness)
+        # draw_segs(rot_scale_visual, org_segs)
+        # cv2.imwrite('rotscale.png',rot_scale_visual)
+
         segs = normalize_segs(org_segs, pp=pp, rho=rho)
         
         # whole segs
@@ -192,11 +270,17 @@ class KittiDataset(Dataset):
         sampled_vert_lines = segs2lines_np(sampled_vert_segs)
         
         if self.return_masks:
-            masks = create_masks(image)
+            masks = create_masks(image_processed)
         
-        image = np.ascontiguousarray(image)
-        target['hl'] = torch.from_numpy(np.ascontiguousarray(gt_hl)).contiguous().float()
-        target['vp'] = torch.from_numpy(np.ascontiguousarray(gt_vp)).contiguous().float()
+        final_vp = np.ones(3)
+        final_vp[0] = rho * (gt_vp[0] - pp[0])
+        final_vp[1] = rho * (gt_vp[1] - pp[1])
+        
+        final_hl = gt_hl + aug_rot / 180 * np.pi
+        
+        final_image = np.ascontiguousarray(image_processed)
+        target['hl'] = torch.from_numpy(np.ascontiguousarray(final_hl)).contiguous().float()
+        target['vp'] = torch.from_numpy(np.ascontiguousarray(final_vp)).contiguous().float()
         
         if self.return_vert_lines:
             target['segs'] = torch.from_numpy(np.ascontiguousarray(sampled_vert_segs)).contiguous().float()
@@ -211,15 +295,14 @@ class KittiDataset(Dataset):
             target['masks'] = masks
         target['org_img'] = org_image
         target['org_sz'] = org_sz
-        target['crop_sz'] = crop_sz
-        target['input_sz'] = input_sz
+        target['input_sz'] = shape
         target['img_path'] = filename
         target['filename'] = filename
         
         extra['lines'] = target['lines'].clone()
         extra['line_mask'] = target['line_mask'].clone()
 
-        return self.transform(image, extra, target)
+        return self.transform(final_image, extra, target)
     
     def __len__(self):
         return self.size  
@@ -237,9 +320,9 @@ def build_kitti(image_set, cfg):
         exit()
         
     PATHS = {
-        "train": 'kitti_spilt/train.csv',
-        "val":   'kitti_spilt/val.csv',
-        "test":  'kitti_spilt/test.csv',
+        "train": 'kitti_split/train.csv',
+        "val":   'kitti_split/val.csv',
+        "test":  'kitti_split/test.csv',
     }
 
     ann_file = PATHS[image_set]

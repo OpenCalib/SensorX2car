@@ -18,10 +18,9 @@ link_directories(${Boost_LIBRARY_DIRS})
 find_package(Eigen3 REQUIRED)
 include_directories("/usr/include/eigen3")
 
-#Get ceres
+# Get ceres
 add_subdirectory(ceres)
 include_directories(${PROJECT_SOURCE_DIR}/ceres/include)
-#link_directories(${CERES_LIBRARY_DIRS})
 
 # Get PCL
 find_package(PCL 1.9 REQUIRED 
@@ -59,7 +58,7 @@ SET(DEP_LIBS
     ceres
 )
 
-file(GLOB_RECURSE SRC_LIST src/*.cpp src/*.c)
+file(GLOB_RECURSE SRC_LIST src/*.cpp)
 
 add_library(${PROJECT_NAME} STATIC ${SRC_LIST})
 

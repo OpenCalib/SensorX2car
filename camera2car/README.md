@@ -1,5 +1,5 @@
 # Introduction
-Camera2car pose calibration via vanishing point and horizon line detection. Both automatic and manual calibration approaches are provided.
+Camera pose calibration uses vanishing point and horizon line detection. Both automatic and manual calibration approaches are provided.
 
 ## Automatic calibration
 We design a network to predict vanishing point and horizon line on a single image. The code is based on the implementations of [**CTRL-C: Camera calibration TRansformer with Line-Classification**](https://github.com/jwlee-vcl/CTRL-C). 
@@ -19,10 +19,10 @@ https://user-images.githubusercontent.com/91944792/210723034-4c92dcca-1c80-4577-
   pip install -r requirements.txt
   ```
 ### Dataset
-We annotated vanishing point and horizon line on KITTI dataset for training. Please download it from the link below.
+We annotated vanishing point and horizon line on KITTI dataset for training and testing. Please download it from the link below.
 ```
-Link(链接): https://pan.baidu.com/s/1iKXnzFZzQ6RvqCal2GzNOQ
-Extraction code(提取码): 89sf 
+Link(链接): https://pan.baidu.com/s/1yBmJoPiGeRpEOCKo_hJEPA
+Extraction code(提取码): 9u1b 
 ```
 
 ### Train
@@ -38,7 +38,7 @@ python train.py --config-file config-files/ctrlc.yaml
 python -m torch.distributed.launch --nproc_per_node=4 --use_env train.py --config-file config-files/ctrlc.yaml
 ```
 ### Pre-trained Model
-Download the pre-trained model from [Google Drive](https://drive.google.com/file/d/1yuYZ85pFMVD4tHdw07ZSVHz__ecI58fV/view?usp=share_link).
+Download the pre-trained model from [Google Drive](https://drive.google.com/file/d/1yuYZ85pFMVD4tHdw07ZSVHz__ecI58fV/view?usp=sharing) and put it under "logs/".
 
 ### Evaluation
 * kitti dataset
@@ -47,9 +47,20 @@ python test_kitti.py --config-file config-files/ctrlc.yaml --opts MODE test
 ```
 * single image inference
 ```
-python test_img.py --config-file config-files/ctrlc.yaml --opts MODE test DATASET_DIR ./pic/ OUTPUT_DIR ./outputs/
+python test_img.py --config-file config-files/ctrlc.yaml --opts MODE test DATASET_DIR ./pic/ OUTPUT_DIR ./output/
 ```
 
+### Calibrate
+The simple process from vanishing point and horizon angle to the rotation matrix is implemented in the file "vphl2R.py".
+
+Calibration using images:
+```
+python test_img_calib.py --config-file config-files/ctrlc.yaml --opts MODE test DATASET_DIR ./pic/
+```
+Notice:
+- It is needed to use straight driving scenes to produce reasonable result.
+- The intrinsic matrix in "test_img_calib.py" should be modified to your intrinsic.
+- The network may need to retrain to adapt other dataset.
 
 ## Manual calibration
 A manual tool to calibrate the rotation matrix from camera to car.

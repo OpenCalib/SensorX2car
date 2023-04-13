@@ -13,12 +13,13 @@ void SavePose(std::vector<Eigen::Matrix4d> lidar_pose, std::string outpath){
     file.close();   
 }
 
-bool RunFastLoam(const std::string dataset_folder, const std::string output_dir, std::vector<Eigen::Matrix4d> &lidar_pose)
+bool RunFastLoam(const std::string dataset_folder, const std::string output_dir, std::vector<Eigen::Matrix4d> &lidar_pose, 
+                    int start_frame, int end_frame)
 {
     std::chrono::time_point<std::chrono::system_clock> start, end;
     start = std::chrono::system_clock::now();
-    
-    std::cout << "Reading dataset from " << dataset_folder;
+    std::cout << "Reading dataset from " << dataset_folder << std::endl;
+
     const std::string lidar_path = dataset_folder;
     std::vector<std::string> lidar_files;
     DIR *dir;
@@ -30,7 +31,8 @@ bool RunFastLoam(const std::string dataset_folder, const std::string output_dir,
     }
     while ((ptr = readdir(dir)) != NULL)
     {
-        if (strcmp(ptr->d_name, ".") != 0 && strcmp(ptr->d_name, "..") != 0)
+        std::string name = ptr->d_name;
+        if (name.size() > 4 && name.substr(name.size() - 4) == ".pcd")
             lidar_files.emplace_back(ptr->d_name);
         ptr++;
     }
@@ -42,8 +44,18 @@ bool RunFastLoam(const std::string dataset_folder, const std::string output_dir,
     closedir(dir);
     std::sort(lidar_files.begin(), lidar_files.end());
 
+    std::vector<std::string> lidar_files_selected;
+    for (int i = 0; i < int(lidar_files.size()); i++)
+    {
+        if(i < start_frame)
+            continue;
+        else if(i > end_frame)
+            break;
+        lidar_files_selected.push_back(lidar_files[i]);
+    }
+
     int total_frame = 0;
-    
+
     // std::vector<Eigen::Quaterniond> pose_q;
     // std::vector<Eigen::Vector3d> pose_t;
 
@@ -67,19 +79,13 @@ bool RunFastLoam(const std::string dataset_folder, const std::string output_dir,
     bool is_odom_inited=false;
     OdomEstimationClass odomEstimation;
     odomEstimation.init(lidar_param, map_resolution);
-    for (unsigned int i = 0; i < lidar_files.size(); i += 1)
+    for (unsigned int i = 0; i < lidar_files_selected.size(); i += 1)
     {
         std::cout << "<-------------------Start running Lidar SLAM" << i
                   << " --------------------->";
-
-        // std::stringstream lts(lidar_files[i]);
-        // std::string timesting;
-        // std::getline(lts, timesting, '.');
-        // double l_time = stod(timesting);
-        //std::cout << l_time << std::endl;
+                  
         // load point cloud
-        std::string pcd_path = lidar_path + lidar_files[i];
-        //std::cout << "lidar_files" << lidar_files[i] << std::endl;
+        std::string pcd_path = lidar_path + '/' + lidar_files_selected[i];
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
         if (pcl::io::loadPCDFile(pcd_path, *cloud) < 0)
         {
@@ -103,6 +109,8 @@ bool RunFastLoam(const std::string dataset_folder, const std::string output_dir,
         }
         Eigen::Quaterniond q_current(odomEstimation.odom.rotation());
         Eigen::Vector3d t_current = odomEstimation.odom.translation();
+        // std::cout << "q_current:" << q_current.coeffs().transpose() << std::endl;
+        // std::cout << "t_current:" << t_current.transpose() << std::endl;
         // pose_q.push_back(q_current);
         // pose_t.push_back(t_current);
         Eigen::Matrix4d T_current = Eigen::Matrix4d::Identity();

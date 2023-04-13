@@ -1,5 +1,5 @@
 MODELS:
-  BACKBONE: 'hourglass' # resnet50/hourglass
+  BACKBONE: 'hourglass' # resnet50
   POSITION_EMBEDDING: 'sine'
   MASKS: False
   USE_STRUCTURE_TENSOR: True
@@ -47,8 +47,8 @@ TEST:
   DISPLAY: False
   
 CHECKPOINT_PERIOD: 1
-DATASET_DIR: "kitti_horizon_vp/"
-OUTPUT_DIR: "logs"
+DATASET_DIR: "kitti_horizon_vp_straight/"
+OUTPUT_DIR: "logs/"
 DEVICE: 'cuda'
 SEED: 42
 RESUME: 

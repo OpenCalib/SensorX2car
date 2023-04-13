@@ -16,24 +16,6 @@ from pylsd import lsd
 
 import datasets.transforms as T
 
-def center_crop(img):
-    sz = img.shape[0:2]
-    side_length = np.min(sz)
-    if sz[0] > sz[1]:
-        ul_x = 0  
-        ul_y = int(np.floor((sz[0]/2) - (side_length/2)))
-        x_inds = [ul_x, sz[1]-1]
-        y_inds = [ul_y, ul_y + side_length - 1]
-    else:
-        ul_x = int(np.floor((sz[1]/2) - (side_length/2)))
-        ul_y = 0
-        x_inds = [ul_x, ul_x + side_length - 1]
-        y_inds = [ul_y, sz[0]-1]
-
-    c_img = img[y_inds[0]:y_inds[1]+1, x_inds[0]:x_inds[1]+1, :]
-
-    return c_img
-
 def create_masks(image):
     masks = torch.zeros((1, image.size()[0], image.size()[1]), dtype=torch.uint8)
     return masks
@@ -53,9 +35,6 @@ def normalize_safe_np(v, axis=-1, eps=1e-6):
     return v/de
 
 def segs2lines_np(segs):
-    '''
-    将用两端点表示的seg转为用方向表示的line
-    '''
     ones = np.ones(len(segs))
     ones = np.expand_dims(ones, axis=-1)
     p1 = np.concatenate([segs[:,:2], ones], axis=-1)
@@ -85,6 +64,61 @@ def sample_vert_segs_np(segs, thresh_theta=22.5):
     thresh_theta = np.radians(thresh_theta)
     return segs[theta < thresh_theta]
 
+def get_transform(center, scale, res, rot=0):
+    # Generate transformation matrix
+    h = 200 * scale
+    t = np.zeros((3, 3))
+    t[0, 0] = float(res[1]) / h
+    t[1, 1] = float(res[0]) / h
+    t[0, 2] = res[1] * (-float(center[0]) / h + .5)
+    t[1, 2] = res[0] * (-float(center[1]) / h + .5)
+    t[2, 2] = 1
+    if not rot == 0:
+        rot = -rot # To match direction of rotation from cropping
+        rot_mat = np.zeros((3,3))
+        rot_rad = rot * np.pi / 180
+        sn,cs = np.sin(rot_rad), np.cos(rot_rad)
+        rot_mat[0,:2] = [cs, -sn]
+        rot_mat[1,:2] = [sn, cs]
+        rot_mat[2,2] = 1
+        # Need to rotate around center
+        t_mat = np.eye(3)
+        t_mat[0,2] = -res[1]/2
+        t_mat[1,2] = -res[0]/2
+        t_inv = t_mat.copy()
+        t_inv[:2,2] *= -1
+        t = np.dot(t_inv,np.dot(rot_mat,np.dot(t_mat,t)))
+    return t
+
+def transform(pt, center, scale, res, invert=0, rot=0):
+    # Transform pixel location to different reference
+    t = get_transform(center, scale, res, rot=rot)
+    if invert:
+        t = np.linalg.inv(t)
+    new_pt = np.array([pt[0], pt[1], 1.]).T
+    new_pt = np.dot(t, new_pt)
+    return new_pt[:2].astype(int)
+
+def crop(img, center, scale, res, rot=0):
+    # Upper left point
+    ul = np.array(transform([0, 0], center, scale, res, invert=1))
+    # Bottom right point
+    br = np.array(transform(res, center, scale, res, invert=1))
+
+    new_shape = [br[1] - ul[1], br[0] - ul[0]] 
+    if len(img.shape) > 2:
+        new_shape += [img.shape[2]]
+    new_img = np.zeros(new_shape)
+
+    # Range to fill new array
+    new_x = max(0, -ul[0]), min(br[0], len(img[0])) - ul[0]
+    new_y = max(0, -ul[1]), min(br[1], len(img)) - ul[1]
+    # Range to sample from original image
+    old_x = max(0, ul[0]), min(len(img[0]), br[0])
+    old_y = max(0, ul[1]), min(len(img), br[1])
+    new_img[new_y[0]:new_y[1], new_x[0]:new_x[1]] = img[old_y[0]:old_y[1], old_x[0]:old_x[1]]
+    return cv2.resize(new_img, res)
+
 class ImageDataset(Dataset):
     def __init__(self, cfg, return_masks=False, transform=None):
         self.input_width = cfg.DATASETS.INPUT_WIDTH
@@ -107,33 +141,36 @@ class ImageDataset(Dataset):
                 
         image = cv2.imread(filename)
         assert image is not None, print("Can' t open image file ", filename)
+        org_image = image.copy()
+
         image = image[:,:,::-1] # convert to rgb
         
-        org_image = image
         org_h, org_w = image.shape[0], image.shape[1]
         org_sz = np.array([org_h, org_w]) 
         
-        crop_image = center_crop(org_image)
-        crop_h, crop_w = crop_image.shape[0], crop_image.shape[1]
-        crop_sz = np.array([crop_h, crop_w]) 
-                
-        image = cv2.resize(image, dsize=(self.input_width, self.input_height))
-        input_sz = np.array([self.input_height, self.input_width])
+        center = (org_w / 2, org_h / 2)
+        pp = (self.input_width / 2, self.input_height / 2)
+        rho = 2.0/np.minimum(self.input_width, self.input_height)
+        s = max(image.shape[0], image.shape[1]) / 200 # scale
+        shape = (self.input_width, self.input_height)
         
-        # preprocess
-        ratio_x = float(self.input_width)/float(org_w)
-        ratio_y = float(self.input_height)/float(org_h)
-
-        pp = (org_w/2, org_h/2) 
-        rho = 2.0/np.minimum(org_w,org_h)
-        
-        # detect line and preprocess       
-        gray = cv2.cvtColor(org_image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         org_segs = lsd(gray, scale=0.8)
         org_segs = filter_length(org_segs, self.min_line_length)
         num_segs = len(org_segs)
         assert num_segs > 10, print(num_segs)
-        
+
+        # ---crop---
+        cropped = crop(image, center, s, shape).astype(np.float32)
+        for i in range(num_segs):
+            org_segs[i][0:2] = transform(org_segs[i][0:2], center, s, shape)
+            org_segs[i][2:4] = transform(org_segs[i][2:4], center, s, shape)
+
+        # cropped_visual = cropped.copy()
+        # draw_segs(cropped_visual, org_segs)
+        # cropped_visual = cropped_visual[:,:,::-1]  
+        # cv2.imwrite('cropped.png', cropped_visual)    
+            
         segs = normalize_segs(org_segs, pp=pp, rho=rho)
         
         # whole segs
@@ -151,9 +188,9 @@ class ImageDataset(Dataset):
         sampled_vert_lines = segs2lines_np(sampled_vert_segs)
         
         if self.return_masks:
-            masks = create_masks(image)
+            masks = create_masks(cropped)
             
-        image = np.ascontiguousarray(image)
+        cropped = np.ascontiguousarray(cropped)
         
         if self.return_vert_lines:
             target['segs'] = torch.from_numpy(np.ascontiguousarray(sampled_vert_segs)).contiguous().float()
@@ -168,15 +205,14 @@ class ImageDataset(Dataset):
             target['masks'] = masks
         target['org_img'] = org_image
         target['org_sz'] = org_sz
-        target['crop_sz'] = crop_sz
-        target['input_sz'] = input_sz
+        target['input_sz'] = shape
         target['img_path'] = filename
         target['filename'] = self.list_filename[idx]
         
         extra['lines'] = target['lines'].clone()
         extra['line_mask'] = target['line_mask'].clone()
 
-        return self.transform(image, extra, target)
+        return self.transform(cropped, extra, target)
     
     def __len__(self):
         return len(self.list_filename)   

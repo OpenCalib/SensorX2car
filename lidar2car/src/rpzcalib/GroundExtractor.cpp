@@ -6,7 +6,7 @@ static omp_lock_t rr_lock;
 bool GroundExtractor::LPRFitting(const PointCloudPtr in_cloud,
                                  PointCloudPtr g_cloud,
                                  PointCloudPtr ng_cloud,
-                                 PlaneParam* plane) {
+                                 PlaneParam * plane) {
     // find the lpr plane
     PointCloudPtr sort_cloud(new PointCloud());
     PCUtil::MaxRangeFilter(in_cloud, 50.0, sort_cloud);
@@ -92,9 +92,11 @@ bool GroundExtractor::RandomRansacFitting(const PointCloudPtr in_cloud,
                                           PointCloudPtr ng_cloud,
                                           PlaneParam* plane) {
     size_t range = in_cloud->points.size();
+
     // random ransac fitting iteratively
     PlaneParam best_plane;
     int max_inlier_points = 0;
+    int gpoints_thre = static_cast<int>(rr_gpoints_rate_ * range);
 
     for (int i = 0; i < rr_iter_times_; i++)
     {
@@ -106,8 +108,10 @@ bool GroundExtractor::RandomRansacFitting(const PointCloudPtr in_cloud,
 
             // area check
             double area;
-            if (!CalArea(rand_p1, rand_p2, rand_p3, &area)) continue;
-            if (area < rr_min_area_thre_) continue;
+            if (!CalArea(rand_p1, rand_p2, rand_p3, &area) || area < rr_min_area_thre_) {
+                j--;
+                continue;
+            }
 
             PointCloudPtr sample_cloud(new PointCloud());
             sample_cloud->points.emplace_back(rand_p1);
@@ -120,7 +124,7 @@ bool GroundExtractor::RandomRansacFitting(const PointCloudPtr in_cloud,
 
             // (TODO:zm) check the points below ground for verification
             int inlier_points = 0;
-            for (size_t j = 0; j < in_cloud->points.size(); j++) {
+            for (size_t j = 0; j < range; j++) {
                 PointType point = in_cloud->points[j];
                 double point_to_plane_dis =
                     std::fabs(pp.normal(0) * point.x + pp.normal(1) * point.y +
@@ -136,12 +140,16 @@ bool GroundExtractor::RandomRansacFitting(const PointCloudPtr in_cloud,
             }
             omp_unset_lock(&rr_lock);
         }
-        int gpoints_thre =
-            static_cast<int>(rr_gpoints_rate_ * in_cloud->points.size());
-        if (max_inlier_points > gpoints_thre) break;
+
+        // random search to refine parameter
+        RandomSearchPlane(in_cloud, best_plane, max_inlier_points, 0.01, 0.01, 0.01, 0.1, 300);
+        RandomSearchPlane(in_cloud, best_plane, max_inlier_points, 0.002, 0.002, 0.002, 0.02, 100);
+
+        if (max_inlier_points > gpoints_thre)
+            break;
     }
 
-    // refine plane param
+     // refine plane param
     for (size_t j = 0; j < in_cloud->points.size(); j++) {
         PointType point = in_cloud->points[j];
         double point_to_plane_dis = std::fabs(
@@ -174,6 +182,50 @@ bool GroundExtractor::RandomRansacFitting(const PointCloudPtr in_cloud,
     plane->normal(1) = neg * best_plane.normal(1);
     plane->normal(2) = neg * best_plane.normal(2);
     plane->intercept = neg * best_plane.intercept;
+    return true;
+}
+
+bool GroundExtractor::RandomSearchPlane(const PointCloudPtr in_cloud, 
+                                        PlaneParam &best_plane,
+                                        int & max_inlier_points,
+                                        double n1_scope, double n2_scope, 
+                                        double n3_scope, double i_scope,
+                                        int iteration_times)
+{
+    std::default_random_engine generator((clock() - time(0)) /
+                                       (double)CLOCKS_PER_SEC);
+    std::uniform_real_distribution<double> distribution_n1(-n1_scope, n1_scope);
+    std::uniform_real_distribution<double> distribution_n2(-n2_scope, n2_scope);
+    std::uniform_real_distribution<double> distribution_n3(-n3_scope, n3_scope);
+    std::uniform_real_distribution<double> distribution_i(-i_scope, i_scope);
+
+    PlaneParam tmp_plane, final_plane;
+    final_plane = best_plane;
+    for (int i = 0; i < iteration_times; i++)
+    {
+        tmp_plane.normal(0) = best_plane.normal(0) + distribution_n1(generator);
+        tmp_plane.normal(1) = best_plane.normal(1) + distribution_n2(generator);
+        tmp_plane.normal(2) = best_plane.normal(2) + distribution_n3(generator);
+        tmp_plane.normal /= tmp_plane.normal.norm();
+        tmp_plane.intercept = best_plane.intercept + distribution_i(generator);
+        int inlier_points = 0;
+        for (size_t j = 0; j < in_cloud->points.size(); j++) {
+            PointType point = in_cloud->points[j];
+            double point_to_plane_dis =
+                std::fabs(tmp_plane.normal(0) * point.x + tmp_plane.normal(1) * point.y +
+                            tmp_plane.normal(2) * point.z + tmp_plane.intercept);
+            if (point_to_plane_dis <= rr_fit_dist_thre_) {
+                inlier_points++;
+            }
+        }
+        if (inlier_points > max_inlier_points)
+        {
+            final_plane = tmp_plane;
+            max_inlier_points = inlier_points;
+        }
+        
+    }
+    best_plane = final_plane;
     return true;
 }
 
@@ -226,7 +278,8 @@ bool GroundExtractor::FittingPlane(PointCloudPtr in_cloud,
 }
 
 bool GroundExtractor::FittingPlaneMesh(const PointCloudPtr in_cloud,
-                                       PlaneParam* plane) {
+                                       PlaneParam *plane) {
+
     // calculate the mean and cov
     std::vector<Eigen::Vector3d> points;
     Eigen::Vector3d mean(0.0, 0.0, 0.0);

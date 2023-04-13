@@ -5,19 +5,17 @@
 #include "Eigen/Dense"
 #include <Eigen/Geometry>
 
-#include <datatable.h>
-#include <bspline.h>
-#include <bsplinebuilder.h>
+#include "util.h"
 
 using namespace SPLINTER;
 
 class YawCalib {
     public:
-        YawCalib(const std::string img_path);
+        YawCalib(const std::string output_dir);
         bool LoadData(const std::vector<Eigen::Matrix4d> &lidar_pose);
         bool Calibrate();
-        bool GetYawSegs(const DataTable &sample_x, const DataTable &sample_y, std::vector<DataTable> &samples_yaw);
-        bool CalibrateSingle(const DataTable &sample_yaw, double &estimate_yaw);
+        bool GetYawSegs(const SPLINTER::DataTable &sample_x, const SPLINTER::DataTable &sample_y, std::vector<SPLINTER::DataTable> &samples_yaw);
+        bool CalibrateSingle(const SPLINTER::DataTable &sample_yaw, double &estimate_yaw);
         double GetFinalYaw();
 
     private:
@@ -30,7 +28,7 @@ class YawCalib {
         std::vector<double> lidar_pose_yaw_;
 
         // visualization
-        std::string img_path_;
+        std::string output_dir_;
         bool save_trajectory_xy = true;
 };
 

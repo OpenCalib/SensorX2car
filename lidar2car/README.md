@@ -1,10 +1,11 @@
 ## Introduction
-A project for LiDAR to car calibration. The result includes three rotation angle and translation at z direction.
+A project for LiDAR to car calibration. It calibrates the three rotation angles and the height of lidar to the ground.
+
 ## Environment
 ```shell
 docker pull xiaokyan/opencalib:v1
 ```
-if remote visualization is not set up, uncomment this sentence in file "src/LidarYawCalib.cpp" to make plt run in the background.
+if remote visualization is not set up, uncomment this sentence in file "src/LidarYawCalib.cpp" to make matplotlib run in the background.
 ```
 plt::backend("Agg");
 ```
@@ -29,7 +30,7 @@ Extraction code(提取码): 5m2x
 - <dataset_folder>: contain lidar files
 - <output_dir>: save output file
 ## Output
-- extrinsic.txt: calibration result
+- calib_result.txt: calibration result
 - pose.txt: lidar pose result
 - trajectory.png: lidar trajectory
 - compared_yaw.png: comparison between lidar pose yaw and trajectory yaw, which can be used to verify the result roughly

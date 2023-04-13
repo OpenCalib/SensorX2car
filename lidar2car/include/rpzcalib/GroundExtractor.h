@@ -41,7 +41,7 @@ class GroundExtractor {
     bool RandomRansacFitting(const PointCloudPtr in_cloud,
                              PointCloudPtr g_cloud,
                              PointCloudPtr ng_cloud,
-                             PlaneParam *plane);
+                             PlaneParam * plane);
 
  private:
     size_t RandIndex(size_t range);
@@ -53,6 +53,8 @@ class GroundExtractor {
 
     bool FittingPlane(PointCloudPtr in_cloud, PlaneParam *plane);
     bool FittingPlaneMesh(const PointCloudPtr in_cloud, PlaneParam *plane);
+    bool RandomSearchPlane(const PointCloudPtr in_cloud, PlaneParam &best_plane, int &max_inlier_points,
+                           double n1_scope, double n2_scope, double n3_scope, double i_scope, int iteration_times);
 
  private:
     const int lpr_max_iters_ = 100;
@@ -60,11 +62,11 @@ class GroundExtractor {
     const double lpr_least_gpoints_rate_ = 0.2;
     const double lpr_least_gpoints_interval_ = 0.2;
 
-    const int rr_iter_times_ = 10;
-    const int rr_max_rand_iters_ = 2000;
+    const int rr_iter_times_ = 5;
+    const int rr_max_rand_iters_ = 500;
     const double rr_gpoints_rate_ = 0.4;
-    const double rr_min_area_thre_ = 0.1;
-    const double rr_fit_dist_thre_ = 0.05;
+    const double rr_min_area_thre_ = 0.25;
+    const double rr_fit_dist_thre_ = 0.1;
 
 };
 

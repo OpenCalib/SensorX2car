@@ -1,3 +1,7 @@
+'''
+usage:
+python test_img.py --config-file config-files/ctrlc.yaml --opts MODE test DATASET_DIR ./pic/ OUTPUT_DIR ./output/
+'''
 import os
 import os.path as osp
 import argparse
@@ -44,9 +48,9 @@ def get_args_parser():
                         )
     return parser
 
-def compute_horizon(pred_hl, pred_vp, img_sz):
-    hl_left = pred_vp[1] + (pred_vp[0] + img_sz[1] / 2) * math.tan(pred_hl)
-    hl_right = pred_vp[1] + (pred_vp[0] - img_sz[1] / 2) * math.tan(pred_hl)
+def compute_horizon(angle, vp, img_sz):
+    hl_left = vp[1] + (vp[0] + img_sz[1] / 2) * math.tan(angle)
+    hl_right = vp[1] + (vp[0] - img_sz[1] / 2) * math.tan(angle)
     return hl_left, hl_right
     
 
@@ -74,46 +78,54 @@ def main(cfg):
     model.load_state_dict(checkpoint['model'])
     model = model.eval()
     
+    start = time.time()
+    image_num = 0
+
     for i, (samples, extra_samples, targets) in enumerate(tqdm(data_loader_test)):
         with torch.no_grad():
             samples = samples.to(device)
             extra_samples = to_device(extra_samples, device)
             outputs = model(samples, extra_samples)
-                    
+
+            filename = targets[0]['filename']
+            filename = osp.splitext(filename)[0]
+
             pred_vp = outputs['pred_vp'].to('cpu')[0].numpy()
             pred_hl = outputs['pred_hl'].to('cpu')[0].numpy()
 
-            img_sz = targets[0]['org_sz']
-            pp = (img_sz[1]/2, img_sz[0]/2) 
-            rho = 2.0/np.minimum(img_sz[0],img_sz[1])
-            
-            filename = targets[0]['filename']
-            filename = osp.splitext(filename)[0]
-            
-            pred_vp[0] = pred_vp[0] / pred_vp[2] / rho
-            pred_vp[1] = pred_vp[1] / pred_vp[2] / rho
-            
-            hl_left, hl_right = compute_horizon(pred_hl, pred_vp, img_sz)
-            
+            input_sz = targets[0]['input_sz']
+            rho = 2.0/np.minimum(input_sz[0],input_sz[1])
+
             img = targets[0]['org_img']
-            extent=[-img_sz[1]/2, img_sz[1]/2, img_sz[0]/2, -img_sz[0]/2]
+            origin_sz = (img.shape[1], img.shape[0])
             
-            plt.figure(figsize=(5,5))                
-            plt.imshow(img, extent=extent)
-            plt.plot(pred_vp[0], pred_vp[1], 'ro')
-            plt.plot([-img_sz[1] / 2, img_sz[1] / 2], 
-                     [hl_left, hl_right], 'r-', alpha=1.0)
-            plt.xlim(-img_sz[1]/2, img_sz[1]/2)
-            plt.ylim( img_sz[0]/2,-img_sz[0]/2)
-            plt.axis('off')
-            img_name = cfg.OUTPUT_DIR +'/' + filename + '_vp_hl.png'
-            plt.savefig(img_name, pad_inches=0, bbox_inches='tight')
-            plt.close('all')
+            pred_vp /= pred_vp[2]
+            crop_vp = np.array((pred_vp[0] / rho, pred_vp[1] / rho))
+            
+            crop_left, crop_right = compute_horizon(pred_hl, crop_vp, input_sz)
+            
+            vp = np.ones(3)
+            vp[0] = crop_vp[0] / input_sz[0] * max(origin_sz[0], origin_sz[1]) + origin_sz[0] / 2
+            vp[1] = crop_vp[1] / input_sz[0] * max(origin_sz[0], origin_sz[1]) + origin_sz[1] / 2
+            
+            hl_left = crop_left / input_sz[0] * max(origin_sz[0], origin_sz[1]) + origin_sz[1] / 2
+            hl_right = crop_right / input_sz[0] * max(origin_sz[0], origin_sz[1]) + origin_sz[1] / 2
+
+
+            cv2.line(img, (0, int(hl_left)), (origin_sz[0] - 1, int(hl_right)), (255, 0, 0), 2)
+            cv2.circle(img, (int(vp[0]), int(vp[1])), 6, (0, 0, 255), -1)
+            
+            img_name = cfg.OUTPUT_DIR +'/' + filename + '.png'
+            cv2.imwrite(img_name, img)
+            image_num += 1
             
             print("filename: ", filename)
-            print("VP: ({}, {})".format(pred_vp[0] + img_sz[1] / 2, pred_vp[1] + img_sz[0] / 2))
+            print("VP: ({}, {})".format(vp[0], vp[1]))
             print("HL angle: {} rad".format(pred_hl))
-                    
+
+    end = time.time()
+    print("total inferece time:", end - start)
+    print("FPS:", image_num / (end - start))                
 
             
 if __name__ == '__main__':
