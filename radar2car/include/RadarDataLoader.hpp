@@ -19,9 +19,13 @@
 #include "time.h"
 #include <Eigen/Core>
 #include "logging.hpp"
-#include "utilities.hpp"
+// #include "utilities.hpp"
 
 #define NOVATEL_INSPVA_FREQ 100 // 100hz
+#define DELPHI_TIMEGAP 0.5 // 500 ms/frame
+#define CONTI_TIMEGAP 0.5 // 500 ms/frame
+#define RAD2DEG 180 / M_PI
+#define DEG2RAD M_PI / 180
 
 namespace autoCalib {
 namespace calibration {
@@ -74,18 +78,36 @@ static bool timeString2timecount_2(
     return true;
 }
 
-
-// radar information in one frame
-struct RadarFrame {
-    // get from novatel inspva
-    // assume direction is always forward
-    // vehicle info??
-    std::vector<double> ve;
+struct RadarObject {
+    std::vector<double> timestamps;
+    std::vector<double> track_range;
+    std::vector<double> track_angle;
     std::vector<double> vi;
-    std::vector<double> times; // in second
-    // timestamp is not needed?
-    std::vector<double> track_angle; // in rad
-    std::vector<double> track_dist;
+    std::vector<double> ve;
+    // gps position read from imu
+    std::vector<double> x;
+    std::vector<double> y;
+    std::vector<double> z;
+
+    double dist(const int &idx0, const int &idx1) const {
+        double dx = x[idx1] - x[idx0];
+        double dy = y[idx1] - y[idx0];
+        double dz = z[idx1] - z[idx0];
+        return sqrt(dx*dx + dy*dy + dz*dz);
+    }
+
+    double timeGap(const int &idx0, const int &idx1) const {
+        return timestamps[idx1] - timestamps[idx0];
+    }
+};
+
+struct ImuFrame {
+    double timestamp;
+    double yaw;
+    double x;
+    double y;
+    double z;
+    double v;
 };
 
 class RadarDataLoader 
@@ -99,44 +121,51 @@ public:
 
     // start_radar_file_num start from 1
     // [start_radar_file_num-1, start_radar_file_num-1+max_radar_file_num]
+    // get radar object that 
     void getRadarCalibData(const std::string &radar_file_dir,
                            const std::string &radar_type,
-                           const std::string &novatel_inspva,
-                           std::vector<RadarFrame> &radar_frames,
-                           int start_radar_file_num = 100,
-                           int max_radar_file_num = 1000);
+                           const std::string &novatel_enu,
+                           std::vector<RadarObject> &radar_frames,
+                           double start_sec = 20,
+                           double max_sec = 600);
 
-
-    int max_file_num_;
-    int start_file_num_;
-    double start_timestamp_;
-    double end_timestamp_;
     double min_velocity_;
 
 private:
-    bool getNovatelSpeed(const std::string &novatel_inspva,
-                         std::vector<double> &timestamps,
-                         std::vector<double> &novatel_speed);
+    void preLoadImu(const std::string &novatel_enu,
+                    std::vector<ImuFrame> &imu_frames,
+                    double start_sec,
+                    double max_sec);
+    
+    bool getStraightSegment(const std::vector<ImuFrame> &imu_frames,
+                            std::vector<std::vector<int>> &segment_idxs);
+
+    // bool getNovatelSpeed(const std::string &novatel_inspva,
+    //                      std::vector<double> &timestamps,
+    //                      std::vector<double> &novatel_speed);
 
     bool getDelphiRadarFrame(const std::string &radar_dir,
                              const std::vector<std::string> &radar_files,
-                             const std::vector<double> &inspva_times,
-                             const std::vector<double> &inspva_speed,
-                             std::vector<RadarFrame> &radar_frames);
+                             const std::vector<ImuFrame> &imu_frames,
+                             const std::vector<std::vector<int>> &segment_idxs,
+                             std::vector<RadarObject> &radar_objects);
 
 
     bool getContiRadarFrame(const std::string &radar_dir,
-                               const std::vector<std::string> &radar_files,
-                               const std::vector<double> &inspva_times,
-                               const std::vector<double> &inspva_speed,
-                               std::vector<RadarFrame> &radar_frames);
+                            const std::vector<std::string> &radar_files,
+                            const std::vector<ImuFrame> &imu_frames,
+                            const std::vector<std::vector<int>> &segment_idxs,
+                            std::vector<RadarObject> &radar_objects);
 
-    double interpolateSpeed(double t, double t0, double t1, double v0, double v1) 
+    double interpolate(double t, double t0, double t1, double v0, double v1) 
     {
         double v = ((t-t0)*v1 + (t1-t)*v0) / (t1-t0);
         return v;
     }
 
+    double dist_thresh_;
+    double angle_thresh_;
+    double length_thresh_;
 };
 
 } // namespace calibration

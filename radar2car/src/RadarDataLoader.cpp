@@ -7,19 +7,137 @@
 namespace autoCalib {
 namespace calibration {
 
+void RadarDataLoader::preLoadImu(const std::string &novatel_enu,
+                                 std::vector<ImuFrame> &imu_frames,
+                                 double start_sec,
+                                 double max_sec)
+{
+    int start_frm = start_sec * NOVATEL_INSPVA_FREQ;
+    int end_frm = start_frm + max_sec * NOVATEL_INSPVA_FREQ;
+    imu_frames.clear();
+
+    std::ifstream enu_file(novatel_enu);
+    std::string line;
+    if (!enu_file) {
+        LOGE("Open imu file failed.\n");
+        return;
+    }
+
+    // skip first line
+    getline(enu_file, line);
+
+    int cnt = 0, real_cnt = 0;
+
+    while (getline(enu_file, line)) {
+        cnt ++;
+        if (cnt < start_frm) continue;
+        if (cnt > end_frm) break;
+
+        std::stringstream ss(line);
+        std::vector<std::string> elements;
+        std::string elem;
+        while (getline(ss, elem, ',')) {
+            elements.emplace_back(elem);
+        }
+        if (elements.size() != 12) {
+            LOGW("num of line elements error! skip this line.\n");
+            continue;
+        }
+        
+        
+        ImuFrame imu_frm;
+        if(!timeString2timecount(elements[0], imu_frm.timestamp)) continue;
+        imu_frm.yaw = stod(elements[10]) * RAD2DEG;
+        imu_frm.v = Eigen::Vector3d(stod(elements[6]), stod(elements[5]),
+                                    stod(elements[7])).norm();
+        imu_frm.x = stod(elements[2]);
+        imu_frm.y = stod(elements[3]);
+        imu_frm.z = stod(elements[4]);
+        imu_frames.emplace_back(imu_frm);
+        real_cnt ++;
+    }
+
+    LOGI("Read %d pose datas.", real_cnt);
+}
+
+bool RadarDataLoader::getStraightSegment(
+    const std::vector<ImuFrame> &imu_frames,
+    std::vector<std::vector<int>> &segment_idxes)
+{
+    segment_idxes.clear();
+    int i = 0;
+    int size = imu_frames.size();
+    dist_thresh_ = 0.2;
+    angle_thresh_ = 1.0;
+    length_thresh_ = 5;
+    // line parameters
+    double m_a, m_b, m_c;
+    while (i < size - 1) {
+        int start_idx = i;
+        int end_idx = i + 1;
+        // get line param
+        m_a = imu_frames[end_idx].y - imu_frames[start_idx].y;
+        m_b = imu_frames[start_idx].x - imu_frames[end_idx].x;
+        m_c = imu_frames[end_idx].x * imu_frames[start_idx].y - imu_frames[start_idx].x * imu_frames[end_idx].y;
+        double sqrt_l_param = sqrt(m_a * m_a + m_b * m_b);
+        double line_yaw = (imu_frames[i+1].yaw + imu_frames[i].yaw) / 2.0;
+        end_idx ++;
+
+        while (end_idx < size) {
+            double c_x = imu_frames[end_idx].x;
+            double c_y = imu_frames[end_idx].y;
+            double c_yaw = imu_frames[end_idx].yaw;
+            // check whether current point fit to the line
+            double pt_line_dist = fabs(m_a * c_x + m_b * c_y + m_c);
+            pt_line_dist /= sqrt_l_param;
+            if (pt_line_dist > dist_thresh_) break;
+            double yaw_diff = c_yaw - line_yaw;
+            if (yaw_diff > 180.0) yaw_diff -= 360;
+            if (yaw_diff < -180.0) yaw_diff += 360;
+            if (yaw_diff > angle_thresh_) break;
+            end_idx ++;
+        }
+
+        i = end_idx;
+        // check whether line length is enough
+        double dx = imu_frames[end_idx - 1].x - imu_frames[start_idx].x;
+        double dy = imu_frames[end_idx - 1].y - imu_frames[start_idx].y;
+        double line_len = sqrt(dx * dx + dy * dy);
+        if (line_len > length_thresh_)
+        {
+            printf("Find line (%d, %d), length=%.3f!\n", start_idx, end_idx-1, line_len);
+            segment_idxes.emplace_back(std::vector<int>({start_idx, end_idx-1}));
+        }
+        else {
+            printf("    Fail line (%d, %d), length=%.3f.\n", start_idx, end_idx-1, line_len);
+        }
+    }
+    if (segment_idxes.size() < 1) {
+        LOGE("No straight line detected.");
+        return false;
+    }
+    return true;
+}
+
 void RadarDataLoader::getRadarCalibData(
     const std::string &radar_file_dir,
     const std::string &radar_type,
-    const std::string &novatel_inspva,
-    std::vector<RadarFrame> &radar_frames,
-    int start_radar_file_num,
-    int max_radar_file_num)
+    const std::string &novatel_enu,
+    std::vector<RadarObject> &radar_frames,
+    double start_sec,
+    double max_sec)
 {
-    start_file_num_ = start_radar_file_num;
+    std::vector<ImuFrame> imu_frames;
+    preLoadImu(novatel_enu, imu_frames, start_sec, max_sec);
+    std::vector<std::vector<int>> segment_idxs;
+    if (!getStraightSegment(imu_frames, segment_idxs)) {
+        LOGE("unable to find straight line.");
+        exit(1);
+    }
+
     std::vector<std::string> radar_files;
     DIR *dir;
     struct dirent *ptr;
-    int success_num = 0;
     if ((dir = opendir(radar_file_dir.c_str())) == NULL) {
         LOGE("Open dir error !");
         exit(1);
@@ -35,35 +153,14 @@ void RadarDataLoader::getRadarCalibData(
     }
     closedir(dir);
     std::sort(radar_files.begin(), radar_files.end());
-    max_file_num_ = std::min(static_cast<int>(radar_files.size()) - start_file_num_ + 1, 
-                                max_radar_file_num);
-    if (max_file_num_ == 0) {
-        LOGE("not enough radar file based on start and end parameters.");
-        exit(1);            
-    }
-    // get start timestamp and end timestamp
-    std::stringstream st(radar_files[start_file_num_ - 1]);
-    std::stringstream et(radar_files[start_file_num_ - 1 + max_file_num_ - 1]);
-    std::string sts, ets;
-    std::getline(st, sts, '.');
-    std::getline(et, ets, '.');
-    timeString2timecount_2(sts, start_timestamp_); 
-    timeString2timecount_2(ets, end_timestamp_);
-    end_timestamp_ += 0.2;  // conclude the timegap in last radar file 
-
-    // load inspva speed from start_time-1/novatel_freq to end_time+1/novatel_freq
-    std::vector<double> inspva_times;
-    std::vector<double> inspva_speed;
-    if (!getNovatelSpeed(novatel_inspva, inspva_times, inspva_speed)) 
-        exit(1);
 
     if (radar_type == "delphi") {
-        if(!getDelphiRadarFrame(radar_file_dir, radar_files, inspva_times, 
-                                inspva_speed, radar_frames)) exit(1);
+        if(!getDelphiRadarFrame(radar_file_dir, radar_files, imu_frames, 
+                                segment_idxs, radar_frames)) exit(1);
     }
     else if (radar_type == "conti") {
-        if(!getContiRadarFrame(radar_file_dir, radar_files, inspva_times, 
-                               inspva_speed, radar_frames)) exit(1);        
+        if(!getContiRadarFrame(radar_file_dir, radar_files, imu_frames, 
+                               segment_idxs, radar_frames)) exit(1);        
     }
     else {
         LOGE("only support 'delphi' and 'conti' radar type.");
@@ -72,78 +169,36 @@ void RadarDataLoader::getRadarCalibData(
     return;        
 }
 
-bool RadarDataLoader::getNovatelSpeed(const std::string &novatel_inspva,
-                                      std::vector<double> &timestamps,
-                                      std::vector<double> &novatel_speed) 
-{
-    std::ifstream infile(novatel_inspva);
-    std::cout<<novatel_inspva<<std::endl;
-    std::string line;
-    int cnt = 0;
-    if (!infile) {
-        LOGE("Open novatel inspva file failed.\n");
-        return false;
-    }
-    double time_gap = 1 / static_cast<double>(NOVATEL_INSPVA_FREQ);
-    while (getline(infile, line)) {
-        std::stringstream ss(line);
-        std::vector<std::string> elements;
-        std::string elem;
-        while (getline(ss, elem, ',')) {
-            elements.emplace_back(elem);
-        }
-        if (elements.size() != 12) {
-            LOGW("num of line elements error! skip this line.\n");
-            continue;
-        }
-        // skip the first line
-        if (elements[0] == "gps_time") {
-            continue;
-        }
-
-        double timestamp;
-        if (!timeString2timecount(elements[0], timestamp)) continue;
-        if (timestamp < start_timestamp_ - time_gap) continue;
-        if (timestamp > end_timestamp_ + time_gap) break;
-        timestamps.emplace_back(timestamp);
-        double vn = stod(elements[5]);
-        double ve = stod(elements[6]);
-        double vu = stod(elements[7]);
-        novatel_speed.emplace_back(sqrt(vn*vn + ve*ve + vu*vu));
-        cnt ++;
-    }
-
-    if (cnt == 0) {
-        LOGE("read 0 inspva data.");
-        return false;
-    }
-    LOGI("Read %d novatel inspva datas.", cnt);
-    return true;
-}
-
-
 bool RadarDataLoader::getDelphiRadarFrame(const std::string &radar_dir,
                              const std::vector<std::string> &radar_files,
-                             const std::vector<double> &inspva_times,
-                             const std::vector<double> &inspva_speed,
-                             std::vector<RadarFrame> &radar_frames)
+                             const std::vector<ImuFrame> &imu_frames,
+                             const std::vector<std::vector<int>> &segment_idxs,
+                             std::vector<RadarObject> &radar_objects)
 {
-    if (inspva_times.size() < 2) {
-        LOGE("there must be more than 1 inspva data.\n");
-        return false;
-    }
-    radar_frames.clear();
+
+    radar_objects.clear();
+    std::vector<int> object_idxs(64, -1);
     // inspva data index to interpolate speed
-    int inspva_idx = 1; 
-    int cnt = 0;
-    for (size_t i = start_file_num_-1 ; i < max_file_num_+start_file_num_-1; ++i) {
+    unsigned int seg_i = 0;
+    double start_time = imu_frames[segment_idxs[seg_i][0]].timestamp;
+    double end_time = imu_frames[segment_idxs[seg_i][1]].timestamp;
+    int imu_idx = segment_idxs[seg_i][0];
+    int imu_size = imu_frames.size();
+    for (size_t i = 0; i < radar_files.size(); ++i) {
+        std::stringstream st(radar_files[i]);
+        std::string sts;
+        std::getline(st, sts, '.');
+        double file_time;
+        timeString2timecount_2(sts, file_time);
+        if (file_time + DELPHI_TIMEGAP < start_time) continue;
+
         std::string file_path = radar_dir + radar_files[i];
         std::ifstream infile(file_path);
         std::string line;
         if (!infile) {
-            LOGW("Open radar file %s failed.", radar_files[i]);
+            LOGW("Open radar file %s failed.", radar_files[i].c_str());
+            continue;
         }
-        RadarFrame data;
         while (getline(infile, line)) {
             std::stringstream ss(line);
             std::vector<std::string> elements;
@@ -157,129 +212,181 @@ bool RadarDataLoader::getDelphiRadarFrame(const std::string &radar_dir,
             }
             // skip the first line
             if (elements[0] == "time_ns") continue;
-
+            // no target
+            int track_status = stoi(elements[6]);
             double timestamp = stod(elements[0]) * 1e-09;
-            if (inspva_times[inspva_idx-1] > timestamp) {
-                LOGI("Read %d radar frames.", cnt);
-                return true;
+            double track_id = stoi(elements[1]);
+            if (track_status == 0 || track_status == 6) { 
+                object_idxs[track_id] = -1;
+                continue;
             }
-            while(inspva_times[inspva_idx] < timestamp) {
-                inspva_idx ++;
-                // reach the end of inspva data
-                if (inspva_idx >= inspva_times.size()) {
-                    LOGI("Read %d radar frames.", cnt);
-                    return true;
+            if (timestamp >= start_time && timestamp < end_time) {
+                // find neighbor imu data
+                while (imu_frames[imu_idx].timestamp < timestamp) {
+                    imu_idx ++;
+                    if (imu_idx >= imu_size) return true;
                 }
-            }
-            if (stoi(elements[4]) == 1) {
-                std::cout << "track changed!\n";
-            }
-            double vi_speed = -stod(elements[14]);
-            // double object_width = stod(elements[11]);
-            if (fabs(vi_speed) > 81) continue;
-            // if (object_width > FILTER_OBJECT_MIN_WIDTH &&
-            //     object_width < FILTER_OBJECT_MAX_WIDTH) continue;
-            if (inspva_speed[inspva_idx] < min_velocity_) continue;
+                // what is new coasted target?
+                if (object_idxs[track_id] == -1 || track_status == 1) {
+                    object_idxs[track_id] = radar_objects.size();
+                    // RadarObject object;
+                    radar_objects.push_back(RadarObject());
+                }
+                  
+                int oidx = object_idxs[track_id];
+                radar_objects[oidx].timestamps.emplace_back(timestamp);
+                radar_objects[oidx].track_range.emplace_back(stod(elements[8]));
+                radar_objects[oidx].track_angle.emplace_back(stod(elements[7]));
+                radar_objects[oidx].vi.emplace_back(fabs(stod(elements[14])));
 
-            double speed = this->interpolateSpeed(timestamp, 
-                inspva_times[inspva_idx-1], inspva_times[inspva_idx],
-                inspva_speed[inspva_idx-1], inspva_speed[inspva_idx]);
-            data.ve.emplace_back(speed);
-            // vi is track_range_rate_m_per_s?
-            data.vi.emplace_back(vi_speed);
-            data.track_angle.emplace_back(stod(elements[7]));
-            data.track_dist.emplace_back(stod(elements[8]));
-            data.times.emplace_back(timestamp);
+                // imu data
+                double speed = this->interpolate(timestamp, 
+                    imu_frames[imu_idx-1].timestamp, imu_frames[imu_idx].timestamp,
+                    imu_frames[imu_idx-1].v, imu_frames[imu_idx].v);
+                double x = this->interpolate(timestamp, 
+                    imu_frames[imu_idx-1].timestamp, imu_frames[imu_idx].timestamp,
+                    imu_frames[imu_idx-1].x, imu_frames[imu_idx].x);
+                double y = this->interpolate(timestamp, 
+                    imu_frames[imu_idx-1].timestamp, imu_frames[imu_idx].timestamp,
+                    imu_frames[imu_idx-1].y, imu_frames[imu_idx].y);
+                double z = this->interpolate(timestamp, 
+                    imu_frames[imu_idx-1].timestamp, imu_frames[imu_idx].timestamp,
+                    imu_frames[imu_idx-1].z, imu_frames[imu_idx].z);    
+                radar_objects[oidx].ve.emplace_back(speed);
+                radar_objects[oidx].x.emplace_back(x);
+                radar_objects[oidx].y.emplace_back(y);
+                radar_objects[oidx].z.emplace_back(z);
+            }
+            else if (timestamp >= end_time) {
+                seg_i ++;
+                if (seg_i >= segment_idxs.size()) return true;
+                start_time = imu_frames[segment_idxs[seg_i][0]].timestamp;
+                end_time = imu_frames[segment_idxs[seg_i][1]].timestamp;
+                // reset object
+                object_idxs = std::vector<int>(64, -1);
+            }
+        }
 
-        }
-        if (data.vi.size() > 0) {
-            radar_frames.emplace_back(data);
-            cnt ++;
-        }
     }
-    LOGI("Read %d radar frames.", cnt);
+
+    LOGI("Read %d radar objects.", static_cast<int>(radar_objects.size()));
     return true;
 }
 
 
 bool RadarDataLoader::getContiRadarFrame(const std::string &radar_dir,
-    const std::vector<std::string> &radar_files,
-    const std::vector<double> &inspva_times,
-    const std::vector<double> &inspva_speed,
-    std::vector<RadarFrame> &radar_frames)
+                             const std::vector<std::string> &radar_files,
+                             const std::vector<ImuFrame> &imu_frames,
+                             const std::vector<std::vector<int>> &segment_idxs,
+                             std::vector<RadarObject> &radar_objects)
 {
-    if (inspva_times.size() < 2) {
-        LOGE("there must be more than 1 inspva data.\n");
-        return false;
-    }
-    radar_frames.clear();
+    radar_objects.clear();
+    std::vector<int> object_idxs(100, -1);
+    std::vector<bool> object_track(100, false);
     // inspva data index to interpolate speed
-    int inspva_idx = 1;
-    int cnt = 0;
-    int file_combine = 50;
-    for (size_t i = start_file_num_-1 ; i < max_file_num_+start_file_num_-1; i+=file_combine) {
-        RadarFrame data;
-        for (int di = 0; di < file_combine; di++) {
-            std::string file_path = radar_dir + radar_files[i + di];
-            std::ifstream infile(file_path);
-            std::string line;
-            if (!infile) {
-                LOGW("Open radar file %s failed.", radar_files[i + di]);
+    unsigned int seg_i = 0;
+    double start_time = imu_frames[segment_idxs[seg_i][0]].timestamp;
+    double end_time = imu_frames[segment_idxs[seg_i][1]].timestamp;
+    int imu_idx = segment_idxs[seg_i][0];
+    int imu_size = imu_frames.size();
+
+    double prev_id = 200;
+    for (size_t i = 0; i < radar_files.size(); ++i) {
+        std::stringstream st(radar_files[i]);
+        std::string sts;
+        std::getline(st, sts, '.');
+        double file_time;
+        timeString2timecount_2(sts, file_time);
+        if (file_time < start_time) continue;
+
+        std::string file_path = radar_dir + radar_files[i];
+        std::ifstream infile(file_path);
+        std::string line;
+        if (!infile) {
+            LOGW("Open radar file %s failed.", radar_files[i].c_str());
+            continue;
+        }
+        while (getline(infile, line)) {
+            std::stringstream ss(line);
+            std::vector<std::string> elements;
+            std::string elem;
+            while (getline(ss, elem, ',')) {
+                elements.emplace_back(elem);
             }
-            while (getline(infile, line)) {
-                std::stringstream ss(line);
-                std::vector<std::string> elements;
-                std::string elem;
-                while (getline(ss, elem, ',')) {
-                    elements.emplace_back(elem);
-                }
-                if (elements.size() != 26) {
-                    LOGW("num of line elements error! skip this line. %d", elements.size());
-                    continue;
-                }
-                // skip the first line
-                if (elements[0] == "time_ns") continue;
 
-                double timestamp = stod(elements[0]) * 1e-09;
-                if (inspva_times[inspva_idx-1] > timestamp) {
-                    LOGI("Read %d radar frames.", cnt);
-                    return true;
-                }
-                while(inspva_times[inspva_idx] < timestamp) {
-                    inspva_idx ++;
-                    // reach the end of inspva data
-                    if (inspva_idx >= inspva_times.size()) {
-                        LOGI("Read %d radar frames.", cnt);
-                        return true;
+            // skip the first line
+            if (elements[0] == "time_ns") continue;
+            // no target
+            double timestamp = stod(elements[0]) * 1e-9;
+            double track_id = stoi(elements[1]);
+            // new frame, check whether track and clean on track box
+            if (track_id < prev_id) {
+                for (size_t idx = 0; idx < object_track.size(); idx++) {
+                    if (!object_track[idx] && object_idxs[idx] != -1) {
+                        // object is no longer on track
+                        object_idxs[idx] = -1;
                     }
+                    object_track[idx] = false;
                 }
-                
-                if (inspva_speed[inspva_idx] < min_velocity_) continue;
+            }
 
+            if (timestamp >= start_time && timestamp < end_time) {
+                // find neighbor imu data
+                while (imu_frames[imu_idx].timestamp < timestamp) {
+                    imu_idx ++;
+                    if (imu_idx >= imu_size) return true;
+                }
+                object_track[track_id] = true;
+                // whether new traget
+                if (object_idxs[track_id] == -1) {
+                    object_idxs[track_id] = radar_objects.size();
+                    // RadarObject object;
+                    radar_objects.push_back(RadarObject());
+                }
+                  
+                int oidx = object_idxs[track_id];
+                double posx = stod(elements[4]);
+                double posy = stod(elements[5]);
                 double vx = stod(elements[2]);
                 double vy = stod(elements[3]);
-                double px = stod(elements[4]);
-                double py = stod(elements[5]);
-                // double vi = sqrt(vx*vx + vy*vy);
-                double vi = -vx;
-                // if (vx > 0) vi *= -1;
-                // vi is vx+vy?
-                data.vi.emplace_back(vi);
-                double speed = this->interpolateSpeed(timestamp, 
-                    inspva_times[inspva_idx-1], inspva_times[inspva_idx],
-                    inspva_speed[inspva_idx-1], inspva_speed[inspva_idx]);
-                data.ve.emplace_back(speed);
-                data.track_angle.emplace_back(atan(py/px));
-                data.track_dist.emplace_back(sqrt(px*px + py*py));
-                data.times.emplace_back(timestamp);
+                radar_objects[oidx].timestamps.emplace_back(timestamp);
+                radar_objects[oidx].track_range.emplace_back(sqrt(posx*posx + posy*posy));
+                radar_objects[oidx].track_angle.emplace_back(atan(posy/posx));
+                radar_objects[oidx].vi.emplace_back(sqrt(vx * vx + vy * vy));
+
+                // imu data
+                double speed = this->interpolate(timestamp, 
+                    imu_frames[imu_idx-1].timestamp, imu_frames[imu_idx].timestamp,
+                    imu_frames[imu_idx-1].v, imu_frames[imu_idx].v);
+                double x = this->interpolate(timestamp, 
+                    imu_frames[imu_idx-1].timestamp, imu_frames[imu_idx].timestamp,
+                    imu_frames[imu_idx-1].x, imu_frames[imu_idx].x);
+                double y = this->interpolate(timestamp, 
+                    imu_frames[imu_idx-1].timestamp, imu_frames[imu_idx].timestamp,
+                    imu_frames[imu_idx-1].y, imu_frames[imu_idx].y);
+                double z = this->interpolate(timestamp, 
+                    imu_frames[imu_idx-1].timestamp, imu_frames[imu_idx].timestamp,
+                    imu_frames[imu_idx-1].z, imu_frames[imu_idx].z);    
+                radar_objects[oidx].ve.emplace_back(speed);
+                radar_objects[oidx].x.emplace_back(x);
+                radar_objects[oidx].y.emplace_back(y);
+                radar_objects[oidx].z.emplace_back(z);
+                prev_id = track_id;
+            }
+            else if (timestamp >= end_time) {
+                seg_i ++;
+                if (seg_i >= segment_idxs.size()) return true;
+                start_time = imu_frames[segment_idxs[seg_i][0]].timestamp;
+                end_time = imu_frames[segment_idxs[seg_i][1]].timestamp;
+                // reset object
+                object_idxs = std::vector<int>(100, -1);
+                object_track = std::vector<bool>(100, false);
             }
         }
-        if (data.vi.size() > 0) {
-            radar_frames.emplace_back(data);
-            cnt ++;
-        }
+
     }
-    LOGI("Read %d radar frames.", cnt);
+
+    LOGI("Read %d radar objects.", static_cast<int>(radar_objects.size()));
     return true;
 }
 

@@ -13,47 +13,36 @@
 int main(int argc, char **argv)
 {
 
-    if(argc != 5 && argc != 7)
+    if(argc != 4 && argc != 6)
     {
-        printf("please intput: ./main radar_type radar_dir_path inspva_file output_dir "
-               "start_radar_file[default=200] max_radar_file_num[default=1000]\n"
-               "for example: run_radar2car delphi ./front_radar ./novatel_inspva.csv ./outputs/\n"
-               "         or: run_radar2car delphi ./front_radar ./novatel_inspva.csv ./outputs/\n"
-               "             200 1000\n");
+        printf("please intput: \n"
+               "./bin/run_radar2car radar_type radar_dir_path enu_file "
+               "start_second[default=20s] max_seconds[default=500s]\n"
+               "for example: \n"
+               "./bin/run_radar2car conti ./data/conti/front_radar/ ./data/conti/novatel_enu.csv 20 500\n"
+               "./bin/run_radar2car delphi ./data/delphi/front_radar ./data/delphi/novatel_enu.csv \n");
         return 1;
     }
 
     std::string radar_type= argv[1];
     std::string radar_dir = argv[2];
-    std::string inspva_file = argv[3];
-    std::string output_dir = argv[4];
+    std::string enu_file = argv[3];
 
     if (radar_dir.rfind('/') != radar_dir.size() - 1) {
         radar_dir = radar_dir + "/";
     }
-    // create output dir
-    if (output_dir.rfind('/') != output_dir.size() - 1) {
-        output_dir = output_dir + "/";
-    }
-    if (opendir(output_dir.c_str()) == nullptr) {
-        char command[1024];
-        snprintf(command, sizeof(command), "mkdir -p %s", output_dir.c_str());
-        if (system(command)) {
-            printf("Create dir: %s\n", output_dir.c_str());
-        }
-    }
 
     autoCalib::calibration::RadarCalibrator calibrator;
     autoCalib::calibration::RadarCalibParam param;
-    if (argc == 7) {
-        std::string start_file_num = argv[5];
-        std::string max_file_num = argv[6];
-        param.start_file_num = stoi(start_file_num);
-        param.max_file_num = stoi(max_file_num);
+    if (argc == 6) {
+        std::string start_second = argv[4];
+        std::string max_second = argv[5];
+        param.start_sec = stod(start_second);
+        param.max_sec = stod(max_second);
     }
 
-    // calibrator.calib(radar_dir, "delphi", inspva_file, output_dir, param);
-    calibrator.calib(radar_dir, radar_type, inspva_file, output_dir, param);
+    calibrator.calib(radar_dir, radar_type, enu_file, param);
+
 
     return 0;
 }

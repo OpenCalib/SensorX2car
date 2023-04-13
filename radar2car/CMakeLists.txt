@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(radar2carcenter)
+project(radar2car)
 message(STATUS "${BoldGreen}[${PROJECT_NAME}]${ColourReset} Building....")
 
 string(REGEX MATCH "/.*senseauto" SENSEAUTO_DIR ${CMAKE_CURRENT_SOURCE_DIR})
